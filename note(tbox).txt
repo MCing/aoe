@@ -1,0 +1,31 @@
+tbox 学习：
+semaphore 记录并管理有多个线程可以使用它
+最多只有这个semaphore指定的最大数量的线程可以获得这个semaphore
+
+tb_semaphore_init   //初始化semaphore 数量
+tb_semaphore_value  //获取当前可用semaphore数量
+tb_semaphore_wait   //阻塞等待可用semaphore
+
+
+
+
+
+
+
+
+
+为解决问题：
+1.
+rt_thread_create 在rtdef.h 中声明，在 rt_thread_hal.c 中定义，在 at_client.c 中使用，但编译报错：
+[ 59%]: compiling.release src\aoe\src\at\src\at_client.c
+[ 69%]: compiling.release src\aoe\src\at\src\at_utils.c
+[ 79%]: compiling.release src\aoe\src\at\src\rt_thread_hal.c
+error: src\aoe\src\at\src\rt_thread_hal.c:173:5: error: conflicting types for 'rt_thread_create'
+ int rt_thread_create(const char *name,
+     ^~~~~~~~~~~~~~~~
+In file included from src\aoe\src\at\src\rt_thread_hal.c:2:
+src\\aoe\\include\\at/rtdef.h:578:20: note: previous declaration of 'rt_thread_create' was here
+ extern rt_thread_t rt_thread_create(const char *name,
+ 
+ 
+---目前解决方案，去掉 rtdef.h 中的声明。 

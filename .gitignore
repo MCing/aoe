@@ -1,0 +1,7 @@
+#files
+*.o
+*.exe
+
+#Directories
+tbox/.xmake
+tbox/build

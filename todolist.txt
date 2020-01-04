@@ -1,0 +1,75 @@
+TODO:LIST
+
+
+1.PPP 配置项（ppp.h）
+authtype
+user
+password
+remoteip
+localip
+lcp_echo_interval;    /* Interval between LCP echo-requests */
+                      0 to close echo
+lcp_echo_fails;       /* Tolerance to unanswered echo-requests */			  
+
+//待定
+usepeerdns  ?? Ask peer for DNS adds 
+persist     ??
+lcp_echo_adaptive    request echo only if the link was idle
+                     /*
+					 * If adaptive echos have been enabled, only send the echo request if
+					 * no traffic was received since the last one.
+					 */
+listen_time    ?? time to listen first (ms), waiting for peer to send LCP packet 
+ 
+
+//sever
+auth_required
+null_login    //empty username and password
+
+
+2.shell命令接口
+uart_open
+uart_close
+ppp_exit
+ppp_cmd
+ppp_data
+at 模式？？
+
+tcp
+ping
+
+3.log开关
+lwipopt.h
+
+4.TCP相关参数
+TCP_MSS
+
+
+
+/*
+ppp authtype:
+#define PPPAUTHTYPE_NONE      0x00
+#define PPPAUTHTYPE_PAP       0x01
+#define PPPAUTHTYPE_CHAP      0x02
+#define PPPAUTHTYPE_MSCHAP    0x04
+#define PPPAUTHTYPE_MSCHAP_V2 0x08
+#define PPPAUTHTYPE_EAP       0x10
+#define PPPAUTHTYPE_ANY       0xff
+*/
+
+
+ppp问题：
+VJ header compression   ？？？？
+
+
+local  IP address 10.20.161.162
+remote IP address 192.168.0.1
+
+
+lwipopts.h   //lwip 相关log开关
+
+
+ppp主动断开流程分析
+
+
+lwip 移植到windows，需要做什么？？

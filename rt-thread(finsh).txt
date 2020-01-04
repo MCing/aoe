@@ -1,0 +1,79 @@
+finsh 移植
+
+背景：
+FinSH 是 RT-Thread 的命令行组件，提供一套供用户在命令行调用的操作接口，主要用于调试或查看系统信息；
+inSH 支持两种输入模式，分别是传统命令行模式和 C 语言解释器模式
+传统命令行模式  msh(module shell)：command [arg1] [arg2] [...]
+C 语言解释器模式：list_thread()
+
+
+
+需求：
+需要命令行处理功能
+
+
+
+源文件：
+rt-thread\components\finsh
+
+如何使用：
+#include <shell.h>
+#include <finsh.h>
+
+
+#ifdef RT_USING_FINSH
+    /* init finsh */
+    finsh_system_init();
+	//finsh_set_device(RT_CONSOLE_DEVICE_NAME); //？？
+#endif
+
+
+
+宏控：
+很多功能宏在 reconfig.h 中定义
+RT_USING_FINSH  //最上层功能宏
+
+FINSH_USING_SYMTAB  //是否通过符号表找到函数，否则就需要自己维护命令对应函数
+RT_USING_HEAP       //使用堆分配shell结构体还是静态
+FINSH_USING_MSH_ONLY  //mini shell ？？？
+RT_USING_POSIX    //打开这个宏，device 不用适配，用标准控制台输入输出
+
+
+代码分析：
+finsh_system_init  //功能初始化入口
+	               //创建命令处理线程 finsh_thread_entry
+				   //初始化信号量sem
+				   
+finsh_thread_entry
+	finsh_init
+	finsh_set_device   //设置输入输出设备，需适配
+	finsh_wait_auth    //鉴权（如果打开）
+	//while(1)
+	finsh_getchar //接收输入
+	msh_exec      //执行命令
+
+
+finsh_set_device  //输入输出接口适配	
+rt_kprintf        //控制台输出需要适配该函数	
+
+
+
+
+移植：
+#define RT_ALIGN_SIZE	8	
+
+
+finsh 
+
+
+finsh移植到windows遇到问题：
+1. 打开宏 FINSH_USING_SYMTAB 但有些对应的参数平台没有，如__fsymtab_start
+---关闭该宏
+
+2.msh_get_cmd 函数中，对比控制台输入数据与 _syscall_table_begin 中命令的逻辑有问题，不需要偏移6个字节
+--用宏 FINSH_USING_SYMTAB 控制，关闭该宏时，不需要偏移
+
+3.疑问 _syscall_table_begin 表中定义的函数指令类型（不带参数）与 msh_get_cmd 返回的函数指针类型（有参数）不一样，但可以正常运行？？？
+
+4.为了完成<tab> 自动补全，finsh_thread_entry 中判断了'\t' 字符，但实际没起作用？？？？
+
