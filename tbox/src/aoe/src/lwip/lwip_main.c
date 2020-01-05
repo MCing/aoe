@@ -216,6 +216,9 @@ static void pppLinkStatusCallback(ppp_pcb *pcb, int errCode, void *ctx)
 	//debug
 	if(errCode != PPPERR_NONE)
 	{
+		pppapi_free(ppp);
+        puts("ppp closed.\n");
+        ppp = NULL;
 		exit_ppp_mode();
 	}
 }
@@ -661,9 +664,9 @@ int lwipLoop(void *param)
             /* make sure to disconnect PPP before stopping the program... */
             callClosePpp = false;
             pppapi_close(ppp, 0);
-            pppapi_free(ppp);
-            puts("ppp closed.\n");
-            ppp = NULL;
+            //pppapi_free(ppp);
+            //puts("ppp closed.\n");
+            //ppp = NULL;
             break;
         }
     }

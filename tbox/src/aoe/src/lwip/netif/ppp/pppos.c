@@ -180,7 +180,6 @@ ppp_pcb *pppos_create(struct netif *pppif, pppos_output_cb_fn output_cb,
 
   pppos = (pppos_pcb *)LWIP_MEMPOOL_ALLOC(PPPOS_PCB);
   if (pppos == NULL) {
-  	printf("ppp_debug LWIP_MEMPOOL_ALLOC null\n");
     return NULL;
   }
 
