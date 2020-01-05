@@ -1058,6 +1058,7 @@ struct rt_uart_device
 	char   name[RT_NAME_MAX_DUP];
 	uart_t *uart;
 	int baud;
+	UART_APP_STATE state;
 	//char *opt;
 };
 

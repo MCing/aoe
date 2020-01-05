@@ -7,6 +7,7 @@
 #include "aoe_config.h"
 #include "tbox/tbox.h"
 #include "libUART.h"
+#include "aoe_common.h"
 
 
 

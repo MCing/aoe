@@ -2,6 +2,8 @@
 #include <strings.h>
 #include "parson.h"
 #include "aoe_common.h"
+#include "at.h"
+#include "tbox/tbox.h"
 
 
 #define CONFIG_FILE "option.json"
@@ -326,5 +328,74 @@ void aoe_init_configuration()
 		save_config();
 
 }
+
+
+
+
+//ppp
+void exit_ppp_mode()
+{
+	at_client_get_first()->device->state = UART_AT_CLIENT;
+
+}
+
+int enter_ppp_mode()
+{
+	at_client_get_first()->device->state = UART_PPP;
+}
+
+
+int ppp_at_dial()
+{
+	int result = -1;
+	at_response_t resp = NULL;
+	resp = at_create_resp(128, 3, 10000);  //result in line 3
+	
+	if (!resp)
+	{
+		tb_trace_i("No memory for response structure!");
+		result = -1;
+		goto exit;
+	}
+	tb_trace_i("at_create_resp ok");
+
+	if (at_exec_cmd(resp, "ATD*99#") != RT_EOK)
+	{
+		tb_trace_i("AT client send commands failed, response error or timeout !");
+		result = -1;
+		goto exit;
+	}
+	//tb_trace_i("resp->line_counts:%d", resp->line_counts);
+
+
+	for(int i = 0; i < resp->line_counts; i++)
+	{
+		char *tmp_buf = NULL;
+		tmp_buf = at_resp_get_line(resp, i+1);
+		tb_trace_i("%s", tmp_buf);
+		if(tb_strstr(tmp_buf, "CONNECT"))
+		{
+			result = 0;
+			goto exit;
+		}
+	}
+
+	
+
+	exit:
+	if(resp != NULL)
+		at_delete_resp(resp);
+
+	return result;
+
+
+}
+
+int ppp_mode_inused()
+{
+	return at_client_get_first()->device->state == UART_PPP;
+}
+
+
 
 

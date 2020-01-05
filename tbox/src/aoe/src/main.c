@@ -25,6 +25,7 @@ void aoe_init_uart(void)
 	else
 	{
 		tb_trace_i("rt_init_device success");
+		at_client_init(uart->port_name, 2048);
 	}
 }
 
@@ -44,19 +45,11 @@ tb_int_t main(tb_int_t argc, tb_char_t** argv)
 	//tb_trace_mode_set(TB_TRACE_MODE_FILE);
 	//tb_trace_file_set_path("tbox.log", tb_false);
 
-	//TODO
 	//load configuration from file
 	aoe_init_configuration();
 	//try to init uart
 	aoe_init_uart();
 	
-
-    //--unit test--
-	//unit_test_uartlib();
-	//unit_test_uartdevice();
-	//uint_at_test();
-	//uint_at_checkstarttime();
-
 	//start shell
 	#ifdef RT_USING_FINSH
 	/* initialize finsh */

@@ -31,6 +31,13 @@
 #endif
 #endif /* PPP_SUPPORT */
 
+#if AOE_REFACTORING
+extern void exit_ppp_mode();
+extern int enter_ppp_mode();
+extern int ppp_at_dial();
+extern int ppp_mode_inused();
+#endif
+
 /* include the port-dependent configuration */
 #include "lwipcfg_msvc.h"
 
@@ -104,12 +111,11 @@ static bool callClosePpp;
 static bool lwipInitialized;
 bool dhcpConfigured;
 
-void createRoute(u_long addr, u_long gw);
-
 static void pppLinkStatusCallback(ppp_pcb *pcb, int errCode, void *ctx)
 {
     struct netif *pppif = ppp_netif(pcb);
     LWIP_UNUSED_ARG(ctx);
+	printf("pppLinkStatusCallback: errCode:%d\n", errCode);
 
     switch (errCode)
     {
@@ -206,6 +212,12 @@ static void pppLinkStatusCallback(ppp_pcb *pcb, int errCode, void *ctx)
             break;
         }
     }
+
+	//debug
+	if(errCode != PPPERR_NONE)
+	{
+		exit_ppp_mode();
+	}
 }
 
 #if PPPOS_SUPPORT
@@ -298,6 +310,7 @@ static int initializeInterfaces(void)
         if (ppp_sio == NULL)
         {
             printf("sio_open error\n");
+			return -1;
         }
         else
         {
@@ -305,7 +318,13 @@ static int initializeInterfaces(void)
 			//TODO set apn AT+CGDCONT
 			//if(ppp_config->apn)
 				
-			sio_write(ppp_sio, "ATD*99#\r\n", strlen("ATD*99#\r\n"));
+			//sio_write(ppp_sio, "ATD*99#\r\n", strlen("ATD*99#\r\n"));
+			if(ppp_at_dial())
+			{
+				printf("enter ppp mode fail\n");
+				return -1;
+			}
+			enter_ppp_mode();
             /* Initiate PPP client connection. */
             ppp = pppapi_pppos_create(&ppp_netif, ppp_output_cb, pppLinkStatusCallback, NULL);
             if (ppp == NULL)
@@ -620,6 +639,9 @@ int lwipLoop(void *param)
     while (1)
     {
         sys_msleep(50);
+
+		if(ppp_mode_inused() == 0)
+			continue;
 
         /* try to read characters from serial line and pass them to PPPoS */
         count = sio_read(ppp_sio, (u8_t *) rxbuf, 1024);

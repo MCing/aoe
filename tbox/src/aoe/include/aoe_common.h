@@ -29,5 +29,20 @@ extern PPP_OPT *aoe_get_ppp_opt();
 extern int aoe_get_uart_portno();
 
 
+
+//uart management
+typedef enum
+{
+	UART_IDLE = 0,
+	UART_AT_CLIENT,
+	UART_AT_DEBUG,
+	UART_PPP,
+
+	UART_MAX
+}UART_APP_STATE;
+
+
+
+
 #endif
 

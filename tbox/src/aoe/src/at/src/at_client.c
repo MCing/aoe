@@ -431,7 +431,7 @@ static rt_err_t at_client_getchar(at_client_t client, char *ch, rt_int32_t timeo
 {
     rt_err_t result = RT_EOK;
 	rt_int32_t left_time = timeout;
-    while (rt_device_read(client->device, 0, ch, 1) == 0)
+    while (client->device->state != UART_AT_CLIENT || rt_device_read(client->device, 0, ch, 1) == 0)
     {
     	#if AOE_REFACTORING
         if(client->thread_exit_flag)
@@ -938,7 +938,7 @@ int at_client_init(const char *dev_name,  rt_size_t recv_bufsz)
         result = -RT_ERROR;
         goto __exit;
     }
-	
+	client->device->state = UART_AT_CLIENT;
 	#else
     /* find and open command device */
     client->device = rt_device_find(dev_name);
