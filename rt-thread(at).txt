@@ -1,0 +1,23 @@
+at
+  at_cli_init
+    //init sem for notice rx data from uart
+    //设置接收数据回调 console_getchar_rx_ind 
+  rt_device_set_rx_indicate  //设置uart接收回调函数 client_getchar_rx_ind ，这样client那边就不会处理接收的数据！！！
+  client_cli_parser   //需要提前初始化 client
+    //创建线程接收数据 at_client_entry  
+	//while  循环直到 ECS 退出
+	console_getchar   //接收控制台输入字符
+	at_obj_exec_cmd   //发送AT，resp为NULL，不需要等待返回
+ 
+ 
+ 
+//uart 数据的处理---> 不做处理，输出到控制台
+client_getchar_rx_ind   //异步上报（如中断），接收uart 接收数据
+  rt_device_read
+  rt_ringbuffer_put_force
+  rt_sem_release  //notice at_client_entry to get ringbuffer
+  
+at_client_entry   //等待 ringbuffer 数据，输出到控制台
+  client_getchar
+    rt_sem_take
+	rt_ringbuffer_getchar

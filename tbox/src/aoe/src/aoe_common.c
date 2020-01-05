@@ -339,11 +339,24 @@ void exit_ppp_mode()
 
 }
 
+void exit_at_debug_mode()
+{
+	at_client_get_first()->device->state = UART_AT_CLIENT;
+
+}
+
+
 int enter_ppp_mode()
 {
 	at_client_get_first()->device->state = UART_PPP;
+	return 0;
 }
 
+int  enter_at_debug_mode()
+{
+	at_client_get_first()->device->state = UART_AT_DEBUG;
+	return 0;
+}
 
 int ppp_at_dial()
 {

@@ -36,6 +36,8 @@ long lwip_tcp(void);
 long lwip_tcpsend(void);
 long switch_ppp_cmd_mode();
 long switch_ppp_data_mode();
+void at(int argc, char **argv);
+
 
 #ifdef FINSH_USING_SYMTAB
 struct finsh_syscall *_syscall_table_begin  = NULL;
@@ -55,6 +57,7 @@ struct finsh_syscall _syscall_table[] =
     {"tcp", lwip_tcp},
 	{"tcpsend", lwip_tcpsend},
 	{"exit", aoe_exit},
+	{"at", at},
     {"list", list},
 
 };

@@ -143,7 +143,7 @@ void finsh_set_prompt_mode(rt_uint32_t prompt_mode)
 static int finsh_getchar(void)
 {
 #ifdef RT_USING_POSIX
-    return getchar();
+    return getch();
 #else
     char ch = 0;
 
@@ -519,17 +519,32 @@ void finsh_thread_entry(void *parameter)
         {
             continue;
         }
-
-        /*
+		//debug
+		//rt_kprintf("---finsh_getchar:%02x----\n", ch);
+		
+        /* by getchar
          * handle control key
          * up key  : 0x1b 0x5b 0x41
          * down key: 0x1b 0x5b 0x42
          * right key:0x1b 0x5b 0x43
          * left key: 0x1b 0x5b 0x44
          */
+
+		/* by getch
+         * handle control key
+         * esc     : 0x1b
+         * up key  : 0xe0 0x48
+         * down key: 0xe0 0x50
+         * right key:0xe0 0x4d
+         * left key: 0xe0 0x4b
+         */
+        //if (ch == 0x1b)
         if (ch == 0x1b)
+			continue;
+		if (ch == 0xe0)
         {
-            shell->stat = WAIT_SPEC_KEY;
+            //shell->stat = WAIT_SPEC_KEY;
+			shell->stat = WAIT_FUNC_KEY;
             continue;
         }
         else if (shell->stat == WAIT_SPEC_KEY)
@@ -546,7 +561,8 @@ void finsh_thread_entry(void *parameter)
         {
             shell->stat = WAIT_NORMAL;
 
-            if (ch == 0x41) /* up key */
+            //if (ch == 0x41) /* up key */
+			if (ch == 0x48) /* up key */
             {
 #ifdef FINSH_USING_HISTORY
                 /* prev history */
@@ -566,7 +582,8 @@ void finsh_thread_entry(void *parameter)
 #endif
                 continue;
             }
-            else if (ch == 0x42) /* down key */
+            //else if (ch == 0x42) /* down key */
+			else if (ch == 0x50) /* down key */
             {
 #ifdef FINSH_USING_HISTORY
                 /* next history */
@@ -588,7 +605,8 @@ void finsh_thread_entry(void *parameter)
 #endif
                 continue;
             }
-            else if (ch == 0x44) /* left key */
+            //else if (ch == 0x44) /* left key */
+            else if (ch == 0x4b) /* left key */
             {
                 if (shell->line_curpos)
                 {
@@ -598,7 +616,8 @@ void finsh_thread_entry(void *parameter)
 
                 continue;
             }
-            else if (ch == 0x43) /* right key */
+            //else if (ch == 0x43) /* right key */
+			else if (ch == 0x4d) /* right key */	
             {
                 if (shell->line_curpos < shell->line_position)
                 {

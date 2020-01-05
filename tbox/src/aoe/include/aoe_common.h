@@ -41,7 +41,9 @@ typedef enum
 	UART_MAX
 }UART_APP_STATE;
 
-
+//uart mode switch
+extern int  enter_at_debug_mode();
+extern void exit_at_debug_mode();
 
 
 #endif

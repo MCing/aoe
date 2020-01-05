@@ -12,7 +12,7 @@
 
 
 #define AT_USING_CLIENT
-
+#define AT_USING_CLI
 
 #ifdef AOE_REFACTORING
 //in tbox
