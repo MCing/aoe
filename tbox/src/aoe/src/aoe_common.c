@@ -397,5 +397,59 @@ int ppp_mode_inused()
 }
 
 
+long switch_ppp_cmd_mode()
+{
+	char *ecs_str = "+++";
+	at_client_send(ecs_str, strlen(ecs_str));
+	exit_ppp_mode();
+}
+
+long switch_ppp_data_mode()
+{
+	int result = -1;
+	at_response_t resp = NULL;
+	resp = at_create_resp(128, 3, 10000);  //result in line 3
+	
+	if (!resp)
+	{
+		tb_trace_i("No memory for response structure!");
+		result = -1;
+		goto exit;
+	}
+	tb_trace_i("at_create_resp ok");
+
+	if (at_exec_cmd(resp, "ATO") != RT_EOK)
+	{
+		tb_trace_i("AT client send commands failed, response error or timeout !");
+		result = -1;
+		goto exit;
+	}
+	//tb_trace_i("resp->line_counts:%d", resp->line_counts);
+
+
+	for(int i = 0; i < resp->line_counts; i++)
+	{
+		char *tmp_buf = NULL;
+		tmp_buf = at_resp_get_line(resp, i+1);
+		tb_trace_i("%s", tmp_buf);
+		if(tb_strstr(tmp_buf, "CONNECT"))
+		{
+			result = 0;
+			goto exit;
+		}
+	}
+
+	exit:
+	if(resp != NULL)
+		at_delete_resp(resp);
+	
+	if(result == 0)
+		enter_ppp_mode();
+	
+	return result;
+
+
+}
+
 
 

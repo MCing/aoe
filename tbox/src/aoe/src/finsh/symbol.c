@@ -34,7 +34,8 @@ long lwip_ppp(void);
 void app_notify_exit_ppp(void);
 long lwip_tcp(void);
 long lwip_tcpsend(void);
-
+long switch_ppp_cmd_mode();
+long switch_ppp_data_mode();
 
 #ifdef FINSH_USING_SYMTAB
 struct finsh_syscall *_syscall_table_begin  = NULL;
@@ -48,7 +49,8 @@ struct finsh_syscall _syscall_table[] =
     {"version", version},
     {"aoetest", aoetest},
     {"ppp", lwip_ppp},
-
+    {"ppp_cmd", switch_ppp_cmd_mode},
+    {"ppp_data", switch_ppp_data_mode},
     {"ppp_exit", app_notify_exit_ppp},
     {"tcp", lwip_tcp},
 	{"tcpsend", lwip_tcpsend},
