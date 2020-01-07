@@ -23,6 +23,8 @@ extern "C"
 #define FINSH_USING_MSH_DEFAULT
 #define FINSH_HISTORY_LINES 20
 
+#define RT_LWIP_ICMP
+
 
 #define FINSH_ARG_MAX 10
 

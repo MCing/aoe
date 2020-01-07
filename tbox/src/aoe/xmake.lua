@@ -6,7 +6,7 @@ target("aoe")
     set_kind("binary")
 
     -- add files
-    add_files("src/**.c|lwip/apps/*.c")
+    add_files("src/**.c")
 	
 	add_files("libUART.lib")
 	

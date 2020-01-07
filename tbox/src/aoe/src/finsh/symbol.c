@@ -37,6 +37,7 @@ long lwip_tcpsend(void);
 long switch_ppp_cmd_mode();
 long switch_ppp_data_mode();
 void at(int argc, char **argv);
+int cmd_ping(int argc, char **argv);
 
 
 #ifdef FINSH_USING_SYMTAB
@@ -58,6 +59,7 @@ struct finsh_syscall _syscall_table[] =
 	{"tcpsend", lwip_tcpsend},
 	{"exit", aoe_exit},
 	{"at", at},
+    {"ping", cmd_ping},
     {"list", list},
 
 };
