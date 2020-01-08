@@ -53,14 +53,6 @@ long version(void)
 FINSH_FUNCTION_EXPORT(version, show RT-Thread version information);
 MSH_CMD_EXPORT(version, show RT-Thread version information);
 
-long aoetest(int arg, void *argv)
-{
-    rt_kprintf("aoe arg:%d\n", arg);
-
-    return 0;
-}
-FINSH_FUNCTION_EXPORT(aoetest, aoe test);
-MSH_CMD_EXPORT(aoetest, aoe test);
 
 long aoe_exit(int arg, void *argv)
 {

@@ -25,6 +25,10 @@ struct finsh_syscall
     const char*     desc;       /* description of system call */
 #endif
     syscall_func func;      /* the function address of system call */
+#if defined(FINSH_USING_DESCRIPTION) && !defined(FINSH_USING_SYMTAB)
+	const char*     desc;       /* description of system call */
+#endif
+
 };
 extern struct finsh_syscall *_syscall_table_begin, *_syscall_table_end;
 

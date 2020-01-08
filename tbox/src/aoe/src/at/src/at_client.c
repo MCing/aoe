@@ -872,7 +872,8 @@ __exit:
 
         if (client->device)
         {
-            rt_device_close(client->device);
+        	//not close here
+            //rt_device_close(client->device);
         }
 
         if (client->recv_buffer)

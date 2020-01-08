@@ -85,6 +85,9 @@ typedef int sys_prot_t;
 #define PPP_INCLUDE_SETTINGS_HEADER
 
 
+#include "tbox/prefix/trace.h"
+#define LWIP_PLATFORM_DIAG(x)	do {tb_trace_i x;} while(0)
+
 #ifndef LWIP_PLATFORM_DIAG
 #define LWIP_PLATFORM_DIAG(x)	do {printf x;} while(0)
 #endif

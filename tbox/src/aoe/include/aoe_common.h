@@ -27,6 +27,7 @@ typedef struct
 	char ppp_debug;
 	char tcp_ip_debug;
 	char trace_debug;
+	char log_to_file;
 }LOG_OPT;
 
 
@@ -36,6 +37,7 @@ extern UART_OPT *aoe_get_uart_opt();
 extern PPP_OPT *aoe_get_ppp_opt();
 extern int aoe_get_uart_portno();
 extern LOG_OPT *aoe_get_log_opt();
+extern void aoe_init_log_config();
 
 
 
@@ -60,6 +62,7 @@ typedef enum
 //uart mode switch
 extern int  enter_at_debug_mode();
 extern void exit_at_debug_mode();
+
 
 
 #endif

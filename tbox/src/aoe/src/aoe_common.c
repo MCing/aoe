@@ -27,6 +27,7 @@
 #define JSON_KW_LOG_PPP_DEBUG 		"ppp_debug"
 #define JSON_KW_LOG_TCPIP_DEBUG 	"tcpip_debug"
 #define JSON_KW_LOG_TRACE_DEBUG 	"trace_debug"
+#define JSON_KW_LOG_TO_FILE 	    "log_to_file"
 
 
 
@@ -47,6 +48,7 @@ static PPP_OPT ppp_option = { \
 	 };
 
 static LOG_OPT log_option = {\
+	0,
 	0,
 	0,
 	0
@@ -356,6 +358,17 @@ int parse_log_configuration(char *conf_file)
 			log_option.trace_debug = (int)json_value_get_number(val);
 		}
 
+		val = json_object_get_value(conf, JSON_KW_LOG_TO_FILE); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONNumber) 
+		{
+			printf("INFO: no configuration for JSON_KW_LOG_TO_FILE\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_LOG_TO_FILE:%d\n", (int)json_value_get_number(val));
+			log_option.log_to_file = (int)json_value_get_number(val);
+		}
+		
 
 	}while(0);
 	
@@ -404,7 +417,8 @@ void save_config()
 	json_object_set_number(obj, JSON_KW_LOG_PPP_DEBUG, log_option.ppp_debug);
 	json_object_set_number(obj, JSON_KW_LOG_TCPIP_DEBUG, log_option.tcp_ip_debug);
 	json_object_set_number(obj, JSON_KW_LOG_TRACE_DEBUG, log_option.trace_debug);
-
+	json_object_set_number(obj, JSON_KW_LOG_TO_FILE, log_option.log_to_file);
+	
 
 	//all in
 	root = json_value_init_object();
@@ -429,7 +443,6 @@ void aoe_init_configuration()
 		save_config();
 
 }
-
 
 
 
@@ -569,4 +582,70 @@ long switch_ppp_data_mode()
 }
 
 
+void aoe_init_uart(void)
+{
+	UART_OPT *uart = aoe_get_uart_opt();
+
+	if(rt_init_device(uart->port_name, uart->baud, "8N1N"))
+	{
+		tb_trace_i("rt_init_device fail");
+	}
+	else
+	{
+		tb_trace_i("rt_init_device success");
+		at_client_init(uart->port_name, 2048);
+	}
+}
+
+void aoe_close_uart(void)
+{
+	UART_OPT *uart = aoe_get_uart_opt();
+
+	at_client_t client = at_client_get_first();
+	
+	if(!rt_find_device(uart->port_name))
+	{
+		tb_trace_i("rt_find_device fail");
+	}
+	else
+	{
+		tb_trace_i("rt_find_device success");
+		if(client != NULL)
+		{
+			tb_trace_i("rt_device_close: %d", rt_device_close(client->device));
+			at_client_release(client);
+		}
+	}
+}
+
+
+
+void aoe_init_log_config()
+{
+	#define LOG_HEAD "aoe_log_"
+	#define LOG_EXT_NAME ".log"
+	char log_to_file = aoe_get_log_opt()->log_to_file;
+	tb_tm_t mtime = {0};
+    tb_localtime(tb_time(), &mtime);
+	
+	if(log_to_file)
+	{
+		tb_char_t path[256] = {0};
+		tb_snprintf(path, sizeof(path), "%s%04ld%02ld%02ld_%02ld%02ld%02ld%s",LOG_HEAD,  mtime.year
+            , mtime.month
+            , mtime.mday
+            , mtime.hour
+            , mtime.minute
+            , mtime.second
+            ,LOG_EXT_NAME
+            );
+		tb_trace_mode_set(TB_TRACE_MODE_FILE);
+		tb_trace_file_set_path(path, tb_true);
+	}
+	else
+	{
+		tb_trace_mode_set(TB_TRACE_MODE_PRINT);
+	}
+	
+}
 

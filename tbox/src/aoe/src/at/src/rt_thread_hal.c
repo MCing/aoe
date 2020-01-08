@@ -137,11 +137,12 @@ rt_device_t rt_uart_open(const char *name, int baud, const char *opt)
 rt_err_t  rt_device_close(rt_device_t dev)
 {
 	int i = 0;
-	
+
 	if (dev == RT_NULL)
 	{
 		return RT_ERROR;
 	}
+	
 	libUART_close(dev->uart);
 	dev->uart = NULL;
 
@@ -275,7 +276,7 @@ rt_tick_t  rt_tick_from_millisecond(rt_int32_t ms)
 {
 	return ms;
 }
-//TODO
+
 rt_tick_t rt_tick_get(void)
 {
 	return tb_mclock();

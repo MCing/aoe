@@ -28,7 +28,6 @@ long list_msgqueue(void);
 long list_mempool(void);
 long list_timer(void);
 
-long aoetest(int arg, void *argv);
 long aoe_exit(void);
 long lwip_ppp(void);
 void app_notify_exit_ppp(void);
@@ -39,6 +38,13 @@ long switch_ppp_data_mode();
 void at(int argc, char **argv);
 int cmd_ping(int argc, char **argv);
 
+void aoe_init_configuration();
+void aoe_close_uart(void);
+void aoe_init_uart(void);
+
+
+
+
 
 #ifdef FINSH_USING_SYMTAB
 struct finsh_syscall *_syscall_table_begin  = NULL;
@@ -48,19 +54,23 @@ struct finsh_sysvar *_sysvar_table_end      = NULL;
 #else
 struct finsh_syscall _syscall_table[] =
 {
-    {"hello", hello},
-    {"version", version},
-    {"aoetest", aoetest},
-    {"ppp", lwip_ppp},
-    {"ppp_cmd", switch_ppp_cmd_mode},
-    {"ppp_data", switch_ppp_data_mode},
-    {"ppp_exit", app_notify_exit_ppp},
-    {"tcp", lwip_tcp},
-	{"tcpsend", lwip_tcpsend},
-	{"exit", aoe_exit},
-	{"at", at},
-    {"ping", cmd_ping},
-    {"list", list},
+    {"hello", hello, "hello world"},
+    {"version", version, "version of aoe"},
+    {"ppp", lwip_ppp, "setup ppp call"},
+    {"ppp_cmd", switch_ppp_cmd_mode, "switch to at online cmd mode(+++)"},
+    {"ppp_data", switch_ppp_data_mode, "switch to ppp data mode(ATO)"},
+    {"ppp_exit", app_notify_exit_ppp, "terminal ppp"},
+    {"tcp", lwip_tcp, "tcp test"},
+	{"tcpsend", lwip_tcpsend, "tcp send data test"},
+	{"exit", aoe_exit, "exit aoe"},
+	{"at", at, "enter at debug mode"},
+    {"ping", cmd_ping, "ping program"},
+
+    //{"uart_state", uart_state},
+    {"uart_init", aoe_init_uart, "init uart"},
+    {"uart_close", aoe_close_uart, "close uart"},
+    {"reconfig", aoe_init_configuration, "update config from file"},
+    {"list", list, "list all command supported"},
 
 };
 struct finsh_syscall *_syscall_table_begin = &_syscall_table[0];
