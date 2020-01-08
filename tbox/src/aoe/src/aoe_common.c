@@ -23,6 +23,10 @@
 #define JSON_KW_PPP_ECHO_INTERVAL 	"lcp_echo_interval"
 #define JSON_KW_PPP_ECHO_FAILS 		"lcp_echo_fails"
 
+#define JSON_KW_LOG 				"debug log"
+#define JSON_KW_LOG_PPP_DEBUG 		"ppp_debug"
+#define JSON_KW_LOG_TCPIP_DEBUG 	"tcpip_debug"
+#define JSON_KW_LOG_TRACE_DEBUG 	"trace_debug"
 
 
 
@@ -41,6 +45,12 @@ static PPP_OPT ppp_option = { \
 	 1,   //LCP_ECHOINTERVAL
 	 3,   //LCP_MAXECHOFAILS
 	 };
+
+static LOG_OPT log_option = {\
+	0,
+	0,
+	0
+	};
 
 int aoe_get_uart_portno()
 {
@@ -64,6 +74,10 @@ PPP_OPT *aoe_get_ppp_opt()
 	return &ppp_option;
 }
 
+LOG_OPT *aoe_get_log_opt()
+{
+	return &log_option;
+}
 
 
 void test_print_options()
@@ -280,24 +294,99 @@ int parse_ppp_configuration(char *conf_file)
 }
 
 
+int parse_log_configuration(char *conf_file)
+{
+	
+	const char conf_obj[] = JSON_KW_LOG;
+	JSON_Value *root_val;
+	JSON_Object *root = NULL;
+	JSON_Object *conf = NULL;
+	JSON_Value *val;
+	int result = 0;
+
+	do
+	{
+		/* try to parse JSON */
+		root_val = json_parse_file_with_comments(conf_file);
+		root = json_value_get_object(root_val);
+		if (root == NULL) {
+			printf("ERROR: %s id not a valid JSON file\n", conf_file);
+			result = -1;
+			break;
+		}
+		conf = json_object_get_object(root, conf_obj);
+		if (conf == NULL) {
+			printf("INFO: %s does not contain a JSON object named %s\n", conf_file, conf_obj);
+			result = -1;
+			break;
+		} else {
+			printf("INFO: %s does contain a JSON object named %s, parsing parameters\n", conf_file, conf_obj);
+		}
+
+		val = json_object_get_value(conf, JSON_KW_LOG_PPP_DEBUG); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONNumber) 
+		{
+			printf("INFO: no configuration for JSON_KW_LOG_PPP_DEBUG\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_LOG_PPP_DEBUG:%d\n", (int)json_value_get_number(val));
+			log_option.ppp_debug = (int)json_value_get_number(val);
+		}
+
+		val = json_object_get_value(conf, JSON_KW_LOG_TCPIP_DEBUG); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONNumber) 
+		{
+			printf("INFO: no configuration for JSON_KW_LOG_TCPIP_DEBUG\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_LOG_TCPIP_DEBUG:%d\n", (int)json_value_get_number(val));
+			log_option.tcp_ip_debug = (int)json_value_get_number(val);
+		}
+
+		val = json_object_get_value(conf, JSON_KW_LOG_TRACE_DEBUG); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONNumber) 
+		{
+			printf("INFO: no configuration for JSON_KW_LOG_TRACE_DEBUG\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_LOG_TRACE_DEBUG:%d\n", (int)json_value_get_number(val));
+			log_option.trace_debug = (int)json_value_get_number(val);
+		}
+
+
+	}while(0);
+	
+	if(root_val)
+		json_value_free(root_val);
+	
+	return result;
+}
+
+
+
 void save_config()
 {
 	const char *filename = CONFIG_FILE;
 	JSON_Value *root = NULL;
 	JSON_Value *uart = NULL;
 	JSON_Value *ppp = NULL;
+	JSON_Value *log = NULL;
 	
 	JSON_Object *obj = NULL;
 	
-	root = json_value_init_object();
-	uart = json_value_init_object();
-	ppp = json_value_init_object();
+	
 
+	//uart config
+	uart = json_value_init_object();
 	obj = json_value_get_object(uart);	
 	json_object_set_string(obj, JSON_KW_UART_PORT, uart_option.port_name);
 	json_object_set_number(obj, JSON_KW_UART_BAUD, uart_option.baud);
 
-
+	//ppp config
+	ppp = json_value_init_object();
 	obj = json_value_get_object(ppp);
 	json_object_set_number(obj, JSON_KW_PPP_AUTHTYPE, ppp_option.auth_type);
 	json_object_set_string(obj, JSON_KW_PPP_USER, ppp_option.user);
@@ -309,11 +398,21 @@ void save_config()
 	json_object_set_number(obj, JSON_KW_PPP_ECHO_FAILS, ppp_option.lcp_echo_fails);
 
 
+	//log config
+	log = json_value_init_object();
+	obj = json_value_get_object(log);
+	json_object_set_number(obj, JSON_KW_LOG_PPP_DEBUG, log_option.ppp_debug);
+	json_object_set_number(obj, JSON_KW_LOG_TCPIP_DEBUG, log_option.tcp_ip_debug);
+	json_object_set_number(obj, JSON_KW_LOG_TRACE_DEBUG, log_option.trace_debug);
+
+
+	//all in
+	root = json_value_init_object();
 	obj = json_value_get_object(root);
 	json_object_set_value(obj, JSON_KW_UART, uart);
 	json_object_set_value(obj, JSON_KW_PPP, ppp);
+	json_object_set_value(obj, JSON_KW_LOG, log);
 
-	
 	json_serialize_to_file_pretty(root, filename);
 
 }
@@ -323,7 +422,9 @@ void aoe_init_configuration()
 	int result = 0;
 	result += parse_uart_configuration(CONFIG_FILE, 0);
 	result += parse_ppp_configuration(CONFIG_FILE);
+	result += parse_log_configuration(CONFIG_FILE);
 
+	printf("aoe_init_configuration result:%d\n", result);
 	if(result)
 		save_config();
 
@@ -362,7 +463,8 @@ int ppp_at_dial()
 {
 	int result = -1;
 	at_response_t resp = NULL;
-	resp = at_create_resp(128, 3, 10000);  //result in line 3
+	
+	 resp = at_create_resp(128, 3, 10000);
 	
 	if (!resp)
 	{
@@ -370,7 +472,6 @@ int ppp_at_dial()
 		result = -1;
 		goto exit;
 	}
-	tb_trace_i("at_create_resp ok");
 
 	if (at_exec_cmd(resp, "ATD*99#") != RT_EOK)
 	{
@@ -378,8 +479,6 @@ int ppp_at_dial()
 		result = -1;
 		goto exit;
 	}
-	//tb_trace_i("resp->line_counts:%d", resp->line_counts);
-
 
 	for(int i = 0; i < resp->line_counts; i++)
 	{
@@ -392,8 +491,6 @@ int ppp_at_dial()
 			goto exit;
 		}
 	}
-
-	
 
 	exit:
 	if(resp != NULL)

@@ -39,6 +39,7 @@
 
 #include "lwip/arch.h"
 #include "lwip/opt.h"
+#include "aoe_common.h"
 
 /**
  * @defgroup debugging_levels LWIP_DBG_MIN_LEVEL and LWIP_DBG_TYPES_ON values
@@ -57,11 +58,14 @@
 #define LWIP_DBG_LEVEL_SERIOUS 0x02
 /** Debug level: Severe */
 #define LWIP_DBG_LEVEL_SEVERE  0x03
+
+#define LWIP_DBG_LEVEL_INFO  0x04  //add by ldy
+
 /**
  * @}
  */
 
-#define LWIP_DBG_MASK_LEVEL    0x03
+#define LWIP_DBG_MASK_LEVEL    0x07 //0x03
 /* compatibility define only */
 #define LWIP_DBG_LEVEL_OFF     LWIP_DBG_LEVEL_ALL
 
@@ -158,6 +162,10 @@
                                    ((debug) & LWIP_DBG_ON) && \
                                    ((debug) & LWIP_DBG_TYPES_ON) && \
                                    ((s16_t)((debug) & LWIP_DBG_MASK_LEVEL) >= LWIP_DBG_MIN_LEVEL)) { \
+                                   if(((debug) == LWIP_DBG_ON) && !AOE_TCPIP_DEBUG) \
+								   	break; \
+								   if(((debug) & (LWIP_DBG_TRACE)) && !AOE_TRACE_DEBUG) \
+								   	break; \
                                  LWIP_PLATFORM_DIAG(message); \
                                  if ((debug) & LWIP_DBG_HALT) { \
                                    while(1); \
