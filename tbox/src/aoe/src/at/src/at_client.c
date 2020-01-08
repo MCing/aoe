@@ -727,7 +727,7 @@ static void client_parser(at_client_t client)
                     LOG_E("Read response buffer failed. The Response buffer size is out of buffer size(%d)!", client->resp->buf_size);
                 }
                 /* check response result */
-                if (memcmp(client->recv_buffer, AT_RESP_END_OK, strlen(AT_RESP_END_OK)) == 0
+                if ((memcmp(client->recv_buffer, AT_RESP_END_OK, strlen(AT_RESP_END_OK)) == 0 || memcmp(client->recv_buffer, "CONNECT", strlen("CONNECT")) == 0)
                         && client->resp->line_num == 0)
                 {
                 	//LOG_D("have read a line hit ok");

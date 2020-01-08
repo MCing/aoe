@@ -320,8 +320,7 @@ static int initializeInterfaces(void)
         	printf("sio_open ok\n");
 			//TODO set apn AT+CGDCONT
 			//if(ppp_config->apn)
-				
-			//sio_write(ppp_sio, "ATD*99#\r\n", strlen("ATD*99#\r\n"));
+
 			if(ppp_at_dial())
 			{
 				printf("enter ppp mode fail\n");

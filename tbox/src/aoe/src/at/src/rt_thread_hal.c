@@ -276,7 +276,10 @@ rt_tick_t  rt_tick_from_millisecond(rt_int32_t ms)
 	return ms;
 }
 //TODO
-rt_tick_t rt_tick_get(void){}
+rt_tick_t rt_tick_get(void)
+{
+	return tb_mclock();
+}
 
 
 

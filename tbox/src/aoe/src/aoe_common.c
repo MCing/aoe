@@ -464,11 +464,18 @@ int ppp_at_dial()
 	int result = -1;
 	at_response_t resp = NULL;
 	
-	 resp = at_create_resp(128, 3, 10000);
+	resp = at_create_resp(128, 0, 5000);
 	
 	if (!resp)
 	{
 		tb_trace_i("No memory for response structure!");
+		result = -1;
+		goto exit;
+	}
+
+	if(at_client_wait_connect(10000))
+	{
+		tb_trace_i("at_client_wait_connect fail");
 		result = -1;
 		goto exit;
 	}
