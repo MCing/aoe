@@ -193,7 +193,7 @@ rt_err_t rt_mutex_release(rt_mutex_t mutex)
 	
 	if(mutex)
 	{
-		tb_mutex_exit(mutex);
+		tb_mutex_leave(mutex);
 		return RT_EOK;
 	}
 	else
