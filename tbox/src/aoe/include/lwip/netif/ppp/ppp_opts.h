@@ -45,6 +45,13 @@
 #endif
 
 /**
+ * PPPOE_SCNAME_SUPPORT==1: Enable PPP Over Ethernet Service Name and Concentrator Name support
+ */
+#ifndef PPPOE_SCNAME_SUPPORT
+#define PPPOE_SCNAME_SUPPORT            0
+#endif
+
+/**
  * PPPOL2TP_SUPPORT==1: Enable PPP Over L2TP
  */
 #ifndef PPPOL2TP_SUPPORT
@@ -72,15 +79,27 @@
 #define LWIP_PPP_API                    (PPP_SUPPORT && (NO_SYS == 0))
 #endif
 
+#if PPP_SUPPORT
+
 /**
  * MEMP_NUM_PPP_PCB: the number of simultaneously active PPP
  * connections (requires the PPP_SUPPORT option)
  */
 #ifndef MEMP_NUM_PPP_PCB
-#define MEMP_NUM_PPP_PCB       1
+#define MEMP_NUM_PPP_PCB                1
 #endif
 
-#if PPP_SUPPORT
+/**
+ * PPP_NUM_TIMEOUTS_PER_PCB: the number of sys_timeouts running in parallel per
+ * ppp_pcb. See the detailed explanation at the end of ppp_impl.h about simultaneous
+ * timers analysis.
+ */
+#ifndef PPP_NUM_TIMEOUTS_PER_PCB
+#define PPP_NUM_TIMEOUTS_PER_PCB        (1 + PPP_IPV4_SUPPORT + PPP_IPV6_SUPPORT + CCP_SUPPORT)
+#endif
+
+/* The number of sys_timeouts required for the PPP module */
+#define PPP_NUM_TIMEOUTS                (PPP_SUPPORT * PPP_NUM_TIMEOUTS_PER_PCB * MEMP_NUM_PPP_PCB)
 
 /**
  * MEMP_NUM_PPPOS_INTERFACES: the number of concurrently active PPPoS
@@ -117,8 +136,7 @@
  * PPP_DEBUG: Enable debugging for PPP.
  */
 #ifndef PPP_DEBUG
-#define PPP_DEBUG                       LWIP_DBG_ON
-//#define PPP_DEBUG                       LWIP_DBG_OFF
+#define PPP_DEBUG                       LWIP_DBG_OFF
 #endif
 
 /**
@@ -279,7 +297,7 @@
  * Currently only supported for PPPoS.
  */
 #ifndef PPP_SERVER
-#define PPP_SERVER                      1
+#define PPP_SERVER                      0
 #endif
 
 #if PPP_SERVER
@@ -355,7 +373,7 @@
  * FSM_DEFTIMEOUT: Timeout time in seconds
  */
 #ifndef FSM_DEFTIMEOUT
-#define FSM_DEFTIMEOUT                  3
+#define FSM_DEFTIMEOUT                  6
 #endif
 
 /**
@@ -369,7 +387,7 @@
  * FSM_DEFMAXCONFREQS: Maximum Configure-Request transmissions
  */
 #ifndef FSM_DEFMAXCONFREQS
-#define FSM_DEFMAXCONFREQS              5
+#define FSM_DEFMAXCONFREQS              10
 #endif
 
 /**
@@ -467,7 +485,7 @@
  * LCP_ECHOINTERVAL: Interval in seconds between keepalive echo requests, 0 to disable.
  */
 #ifndef LCP_ECHOINTERVAL
-#define LCP_ECHOINTERVAL                1
+#define LCP_ECHOINTERVAL                0
 #endif
 
 /**
@@ -590,5 +608,10 @@
 #endif /* LWIP_INCLUDED_POLARSSL_ARC4 */
 
 #endif /* PPP_SUPPORT */
+
+/* Default value if unset */
+#ifndef PPP_NUM_TIMEOUTS
+#define PPP_NUM_TIMEOUTS                0
+#endif /* PPP_NUM_TIMEOUTS */
 
 #endif /* LWIP_PPP_OPTS_H */

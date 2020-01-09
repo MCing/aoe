@@ -41,6 +41,11 @@
 #define LWIP_HDR_INET_H
 
 #include "lwip/opt.h"
+
+#if LWIP_SOCKET_EXTERNAL_HEADERS
+#include LWIP_SOCKET_EXTERNAL_HEADER_INET_H
+#else /* LWIP_SOCKET_EXTERNAL_HEADERS */
+
 #include "lwip/def.h"
 #include "lwip/ip_addr.h"
 #include "lwip/ip6_addr.h"
@@ -134,8 +139,6 @@ extern const struct in6_addr in6addr_any;
 
 #define inet_addr_from_ip4addr(target_inaddr, source_ipaddr) ((target_inaddr)->s_addr = ip4_addr_get_u32(source_ipaddr))
 #define inet_addr_to_ip4addr(target_ipaddr, source_inaddr)   (ip4_addr_set_u32(target_ipaddr, (source_inaddr)->s_addr))
-/* ATTENTION: the next define only works because both s_addr and ip4_addr_t are an u32_t effectively! */
-#define inet_addr_to_ip4addr_p(target_ip4addr_p, source_inaddr)   ((target_ip4addr_p) = (ip4_addr_t*)&((source_inaddr)->s_addr))
 
 /* directly map this to the lwip internal functions */
 #define inet_addr(cp)                   ipaddr_addr(cp)
@@ -153,9 +156,8 @@ extern const struct in6_addr in6addr_any;
 #define inet6_addr_to_ip6addr(target_ip6addr, source_in6addr)   {(target_ip6addr)->addr[0] = (source_in6addr)->un.u32_addr[0]; \
                                                                  (target_ip6addr)->addr[1] = (source_in6addr)->un.u32_addr[1]; \
                                                                  (target_ip6addr)->addr[2] = (source_in6addr)->un.u32_addr[2]; \
-                                                                 (target_ip6addr)->addr[3] = (source_in6addr)->un.u32_addr[3];}
-/* ATTENTION: the next define only works because both in6_addr and ip6_addr_t are an u32_t[4] effectively! */
-#define inet6_addr_to_ip6addr_p(target_ip6addr_p, source_in6addr)   ((target_ip6addr_p) = (ip6_addr_t*)(source_in6addr))
+                                                                 (target_ip6addr)->addr[3] = (source_in6addr)->un.u32_addr[3]; \
+                                                                 ip6_addr_clear_zone(target_ip6addr);}
 
 /* directly map this to the lwip internal functions */
 #define inet6_aton(cp, addr)            ip6addr_aton(cp, (ip6_addr_t*)addr)
@@ -168,5 +170,7 @@ extern const struct in6_addr in6addr_any;
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* LWIP_SOCKET_EXTERNAL_HEADERS */
 
 #endif /* LWIP_HDR_INET_H */

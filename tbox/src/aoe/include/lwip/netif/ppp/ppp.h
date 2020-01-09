@@ -47,6 +47,10 @@
 #include "lwip/ip6_addr.h"
 #endif /* PPP_IPV6_SUPPORT */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Disable non-working or rarely used PPP feature, so rarely that we don't want to bloat ppp_opts.h with them */
 #ifndef PPP_OPTIONS
 #define PPP_OPTIONS         0
@@ -460,9 +464,6 @@ struct ppp_pcb_s {
 #define PPPAUTHTYPE_EAP       0x10
 #define PPPAUTHTYPE_ANY       0xff
 void ppp_set_auth(ppp_pcb *pcb, u8_t authtype, const char *user, const char *passwd);
-#if AOE_REFACTORING
-void ppp_set_echo_opt(ppp_pcb *pcb, u8_t lcp_echo_interval, u8_t lcp_echo_fails);
-#endif
 
 /*
  * If set, peer is required to authenticate. This is mostly necessary for PPP server support.
@@ -687,6 +688,10 @@ err_t ppp_ioctl(ppp_pcb *pcb, u8_t cmd, void *arg);
 /* Set an lwIP-style link-callback for the selected PPP device */
 #define ppp_set_netif_linkcallback(ppp, link_cb)           \
         netif_set_link_callback(ppp->netif, link_cb);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* PPP_H */
 

@@ -32,7 +32,7 @@
  */
 
 #include "netif/ppp/ppp_opts.h"
-#include "netif/ppp/pppdebug.h"  //debug
+
 #if LWIP_PPP_API /* don't build if not configured for use in lwipopts.h */
 
 #include "netif/ppp/pppapi.h"
@@ -128,7 +128,6 @@ pppapi_do_pppos_create(struct tcpip_api_call_data *m)
   /* cast through void* to silence alignment warnings. 
    * We know it works because the structs have been instantiated as struct pppapi_msg */
   struct pppapi_msg *msg = (struct pppapi_msg *)(void*)m;
-  printf("ppp_debug pppapi_do_pppos_create\n");
 
   msg->msg.ppp = pppos_create(msg->msg.msg.serialcreate.pppif, msg->msg.msg.serialcreate.output_cb,
     msg->msg.msg.serialcreate.link_status_cb, msg->msg.msg.serialcreate.ctx_cb);
@@ -144,8 +143,6 @@ pppapi_pppos_create(struct netif *pppif, pppos_output_cb_fn output_cb,
                ppp_link_status_cb_fn link_status_cb, void *ctx_cb)
 {
   ppp_pcb* result;
-  
-  printf("ppp_debug pppapi_pppos_create\n");
   PPPAPI_VAR_DECLARE(msg);
   PPPAPI_VAR_ALLOC_RETURN_NULL(msg);
 
