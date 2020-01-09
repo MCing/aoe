@@ -538,7 +538,7 @@ long switch_ppp_data_mode()
 {
 	int result = -1;
 	at_response_t resp = NULL;
-	resp = at_create_resp(128, 3, 10000);  //result in line 3
+	resp = at_create_resp(128, 0, 2000);
 	
 	if (!resp)
 	{
