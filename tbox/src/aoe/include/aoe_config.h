@@ -10,7 +10,7 @@ extern "C"
 
 #define AOE_REFACTORING 1
 
-#define AOE_VERSION "AOE_20200101_V0.1"
+#define AOE_VERSION "AOE_V0.0.1"
 
 
 //for rt-thread finsh

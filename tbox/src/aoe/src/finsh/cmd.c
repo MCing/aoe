@@ -46,7 +46,7 @@ FINSH_FUNCTION_EXPORT(hello, say hello world);
 
 long version(void)
 {
-    rt_kprintf("aoe version:%s\n", AOE_VERSION);
+    rt_kprintf("%s ,build time: %s %s\n", AOE_VERSION, __DATE__, __TIME__);
 
     return 0;
 }

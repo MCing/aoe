@@ -55,7 +55,7 @@ struct finsh_sysvar *_sysvar_table_end      = NULL;
 struct finsh_syscall _syscall_table[] =
 {
     {"hello", hello, "hello world"},
-    {"version", version, "version of aoe"},
+    {"version", version, "show version of aoe and build time"},
     {"ppp", lwip_ppp, "setup ppp call"},
     {"ppp_cmd", switch_ppp_cmd_mode, "switch to at online cmd mode(+++)"},
     {"ppp_data", switch_ppp_data_mode, "switch to ppp data mode(ATO)"},
