@@ -42,6 +42,7 @@ void aoe_init_configuration();
 void aoe_close_uart(void);
 void aoe_init_uart(void);
 
+int cmd_iperf(int argc, char **argv);
 
 
 
@@ -65,6 +66,7 @@ struct finsh_syscall _syscall_table[] =
 	{"exit", aoe_exit, "exit aoe"},
 	{"at", at, "enter at debug mode"},
     {"ping", cmd_ping, "ping program"},
+    {"iperf", cmd_iperf, "iperf test"},
 
     //{"uart_state", uart_state},
     {"uart_init", aoe_init_uart, "init uart"},

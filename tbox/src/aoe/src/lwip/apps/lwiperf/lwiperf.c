@@ -56,6 +56,7 @@
 #include "lwip/inet.h"
 
 #include <string.h>
+#include "aoe_config.h"
 
 /* Currently, only TCP is implemented */
 #if LWIP_TCP && LWIP_CALLBACK_API
@@ -838,5 +839,43 @@ lwiperf_abort(void *lwiperf_session)
     }
   }
 }
+
+#ifdef RT_USING_FINSH
+void lwiperf_report(void *arg, enum lwiperf_report_type report_type,
+  const ip_addr_t* local_addr, u16_t local_port, const ip_addr_t* remote_addr, u16_t remote_port,
+  u32_t bytes_transferred, u32_t ms_duration, u32_t bandwidth_kbitpsec)
+{
+	printf("-----iperf report-------\n");
+	printf("local_port:%d remote_port:%d\n", local_port, remote_port);
+	printf("transferred:%d bytes\nbandwidth:%d kbps\nused:%d ms\n", bytes_transferred, bandwidth_kbitpsec, ms_duration);
+	printf("------------------------\n");
+}
+
+int cmd_iperf(int argc, char **argv)
+{
+    if (argc == 1)
+    {
+        printf("Please input: iperf <host address> <port>\n");
+    }
+    else
+    {
+    	//string ip conver to ip_addr_t ip
+    	ip_addr_t remote_addr;
+		u16_t remote_port;
+		if(0 == ipaddr_aton(argv[1], &remote_addr))
+		{
+		 	printf("invalid addr\n");
+			return -1;
+		}
+		remote_port = atoi(argv[2]);
+		
+        lwiperf_start_tcp_client(((ip4_addr_t*)&remote_addr), remote_port, LWIPERF_CLIENT, lwiperf_report, NULL);
+    }
+
+    return 0;
+}
+#endif /* RT_USING_FINSH */
+
+
 
 #endif /* LWIP_TCP && LWIP_CALLBACK_API */
