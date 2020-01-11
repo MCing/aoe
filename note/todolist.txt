@@ -73,3 +73,22 @@ ppp主动断开流程分析
 
 
 lwip 移植到windows，需要做什么？？
+
+
+
+todo list: update 20200111
+1.【B】优化速率 
+iperf 测试速率
+总结影响速率的因素
+
+2.【C】pcap 抓取log  winpcap  
+
+3.【A】ipcp 流程没有请求 dns 问题
+
+4.【A】优化ping 指令
+
+
+
+
+
+
