@@ -649,3 +649,88 @@ void aoe_init_log_config()
 	
 }
 
+
+/*---------pcap----------*/
+struct pcap_file_header {
+	unsigned int 	magic;
+	unsigned short 	version_major;
+	unsigned short 	version_minor;
+	int 			thiszone;     /* gmt to local correction */
+	unsigned int 	sigfigs;    /* accuracy of timestamps */
+	unsigned int 	snaplen;    /* max length saved portion of each pkt */
+	unsigned int 	linktype;   /* data link type (LINKTYPE_*) */
+};
+
+
+struct timeval_d {
+	long    tv_sec;         /* seconds */
+	long    tv_usec;        /* and microseconds */
+};
+struct pcap_pkthdr {
+	struct timeval_d ts;      /* time stamp */
+	unsigned int caplen;     /* length of portion present */
+	unsigned int len;        /* length this packet (off wire) */
+};
+
+tb_file_ref_t test_file = NULL;
+
+void init_file(int argc, char **argv)
+{
+	if(argc != 2)
+		return;
+	char filename[256] = {0};
+	strcat(filename, argv[1]);
+	test_file = tb_file_init(filename, TB_FILE_MODE_RW | TB_FILE_MODE_CREAT | TB_FILE_MODE_APPEND);
+	if(test_file)
+		printf("init file sucess");
+	else
+	{
+		printf("init file fail");
+		return;
+	}
+
+	struct pcap_file_header pcap_header;
+
+	pcap_header.magic = 0xa1b2c3d4;//0xd4c3b2a1;
+	pcap_header.version_major = 2;
+	pcap_header.version_minor = 4;
+	pcap_header.thiszone = 0;     
+	pcap_header.sigfigs = 0;
+	pcap_header.snaplen = 8192;
+	pcap_header.linktype = 204;
+
+	tb_long_t wb = tb_file_writ(test_file, (tb_byte_t *)&pcap_header, sizeof(struct pcap_file_header));
+	printf("wb:%d\n", wb);
+	
+}
+void write_file()
+{
+	
+	tb_byte_t packet_data[] = {0xff,0x03,0xc0,0x21,0x01,0x01,0x00 ,0x14 ,0x02 ,0x06 ,0x00 ,0x00 ,0x00 ,0x00 ,0x05 ,0x06,0xea ,0x67 ,0x6b ,0xc5 ,0x07 ,0x02 ,0x08 ,0x02 ,0x35 ,0x8b};
+	struct pcap_pkthdr pkt_header;
+	pkt_header.ts.tv_sec = 1577275287;
+	pkt_header.ts.tv_usec = 0;
+	pkt_header.caplen = sizeof(packet_data)+1;
+	pkt_header.len = sizeof(packet_data)+1;
+	tb_byte_t write_data[2048] = {0};
+	char dir = 0;
+	memcpy(write_data, &pkt_header, sizeof(struct pcap_pkthdr));
+	memcpy(write_data + sizeof(struct pcap_pkthdr), &dir, 1);
+	memcpy(write_data + sizeof(struct pcap_pkthdr) + 1, packet_data, sizeof(packet_data));
+	
+	if(test_file)
+	{
+		tb_long_t wb = tb_file_writ(test_file, write_data, 1 + sizeof(struct pcap_pkthdr) + sizeof(packet_data));
+		printf("sizeof(pcap_pkthdr):%d sizeof(packet_data):%d wb:%d\n", sizeof(struct pcap_pkthdr), sizeof(packet_data), wb);
+	}
+}
+void close_file()
+{
+	if(test_file)
+		tb_file_exit(test_file);
+
+	test_file = NULL;
+}
+
+
+
