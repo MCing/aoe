@@ -347,21 +347,9 @@ static int initializeInterfaces(void)
 			//TODO
             //ppp_set_ipcp_hisaddr(ppp, &hisAddr);
 
-            /* Set primary DNS server */
-            if (ADAPTER_DNS)
-            {
-                addr.addr = ADAPTER_DNS;
-            }
-            else
-            {
-                IP4_ADDR(&addr, 8, 8, 8, 8);
-            }
-            ppp_set_ipcp_dnsaddr(ppp, 0, &addr);
-
             /* Set secondary DNS server */
 
-            IP4_ADDR(&addr, 77, 88, 8, 8);
-            ppp_set_ipcp_dnsaddr(ppp, 1, &addr);
+           ppp_set_usepeerdns(ppp, 1);
 
             /* Auth configuration, this is pretty self-explanatory */
 			
