@@ -24,7 +24,7 @@
  * This file is part of the lwIP TCP/IP stack.
  *
  */
-
+#include "aoe_config.h"
 #ifndef LWIP_PPP_OPTS_H
 #define LWIP_PPP_OPTS_H
 
@@ -154,7 +154,11 @@
  * Mandatory for debugging, it displays exchanged packet content in debug trace.
  */
 #ifndef PRINTPKT_SUPPORT
+#ifdef AOE_REFACTORING
+#define PRINTPKT_SUPPORT                1
+#else
 #define PRINTPKT_SUPPORT                0
+#endif
 #endif
 
 /**
