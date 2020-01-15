@@ -28,6 +28,7 @@
 #define JSON_KW_LOG_TCPIP_DEBUG 	"tcpip_debug"
 #define JSON_KW_LOG_TRACE_DEBUG 	"trace_debug"
 #define JSON_KW_LOG_TO_FILE 	    "log_to_file"
+#define JSON_KW_LOG_PCAP_FILE	    "pcap_file"
 
 
 
@@ -43,11 +44,12 @@ static PPP_OPT ppp_option = { \
 	 "", 
 	 "", 
 	 "cmnet",
-	 1,   //LCP_ECHOINTERVAL
+	 0,   //LCP_ECHOINTERVAL
 	 3,   //LCP_MAXECHOFAILS
 	 };
 
 static LOG_OPT log_option = {\
+	0,
 	0,
 	0,
 	0,
@@ -368,7 +370,19 @@ int parse_log_configuration(char *conf_file)
 			printf("INFO: JSON_KW_LOG_TO_FILE:%d\n", (int)json_value_get_number(val));
 			log_option.log_to_file = (int)json_value_get_number(val);
 		}
+
 		
+		val = json_object_get_value(conf, JSON_KW_LOG_PCAP_FILE); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONNumber) 
+		{
+			printf("INFO: no configuration for JSON_KW_LOG_PCAP_FILE\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_LOG_PCAP_FILE:%d\n", (int)json_value_get_number(val));
+			log_option.pcap_file = (int)json_value_get_number(val);
+		}
+	
 
 	}while(0);
 	
@@ -418,6 +432,7 @@ void save_config()
 	json_object_set_number(obj, JSON_KW_LOG_TCPIP_DEBUG, log_option.tcp_ip_debug);
 	json_object_set_number(obj, JSON_KW_LOG_TRACE_DEBUG, log_option.trace_debug);
 	json_object_set_number(obj, JSON_KW_LOG_TO_FILE, log_option.log_to_file);
+	json_object_set_number(obj, JSON_KW_LOG_PCAP_FILE, log_option.pcap_file);
 	
 
 	//all in
@@ -661,7 +676,6 @@ struct pcap_file_header {
 	unsigned int 	linktype;   /* data link type (LINKTYPE_*) */
 };
 
-
 struct timeval_d {
 	long    tv_sec;         /* seconds */
 	long    tv_usec;        /* and microseconds */
@@ -672,23 +686,242 @@ struct pcap_pkthdr {
 	unsigned int len;        /* length this packet (off wire) */
 };
 
-tb_file_ref_t test_file = NULL;
+#define PCAP_FRAME_MAX 2048
+#define PCAP_QUEUE_SIZE 1024
+typedef unsigned char ext_accm[32];
 
-void init_file(int argc, char **argv)
+typedef struct
 {
-	if(argc != 2)
+	ext_accm accm;
+	int frame_len;
+	tb_timeval_t tv;
+	unsigned char ppp_frame[PCAP_FRAME_MAX];
+	char dir;
+}pcap_packet_t;
+
+
+
+tb_queue_ref_t pcap_queue = NULL;
+tb_file_ref_t pcap_file = NULL;
+tb_mutex_ref_t pcap_queue_mutex = NULL;
+tb_thread_ref_t pcap_file_thread = NULL;
+
+void aoe_pcap_queue_put(unsigned char *data, int data_len, char dir,ext_accm accm)
+{
+#define PPP_FRAME_DUMP 0
+#if PPP_FRAME_DUMP
+		if(dir == 0)
+			printf("\n------ppp out dump------\n");
+		else
+			printf("\n------ppp in dump------\n");
+	
+		for(int i = 0; i < data_len; i++)
+			printf("%02X", data[i]);
+		printf("\n----------------\n");
+#endif
+
+	if(!pcap_queue)
 		return;
-	char filename[256] = {0};
-	strcat(filename, argv[1]);
-	test_file = tb_file_init(filename, TB_FILE_MODE_RW | TB_FILE_MODE_CREAT | TB_FILE_MODE_APPEND);
-	if(test_file)
-		printf("init file sucess");
-	else
+	
+	pcap_packet_t new_packet;
+	new_packet.dir = dir;
+	new_packet.frame_len = data_len;
+	tb_gettimeofday(&(new_packet.tv), tb_null);
+	
+	memcpy(new_packet.accm, accm, sizeof(ext_accm));
+	
+	if(data_len > PCAP_FRAME_MAX)
 	{
-		printf("init file fail");
-		return;
+		new_packet.frame_len = PCAP_FRAME_MAX;
+	}
+	memcpy(new_packet.ppp_frame, data, new_packet.frame_len);
+	tb_mutex_enter(pcap_queue_mutex);
+	tb_queue_put(pcap_queue, (tb_cpointer_t)&new_packet);
+	tb_mutex_leave(pcap_queue_mutex);
+	//tb_trace_i("aoe_pcap_queue_put size:%d", tb_queue_size(pcap_queue));
+}
+#if 1
+unsigned char tmp_store_buf[2048] = {0};
+int tmp_store_offset = 0;
+static int aoe_convert_ppp_data(const unsigned char *data, int data_len, unsigned char *out_buf, int *out_len, ext_accm accm)
+{
+
+	#define ESCAPE_P(accm, c) ((accm)[(c) >> 3] & 1 << (c & 0x07))
+	#define	PPP_ESCAPE	0x7d	/* Asynchronous Control Escape */
+	#define	PPP_TRANS	0x20	/* Asynchronous transparency modifier */
+	
+	unsigned char *p_data = NULL;
+	int len = data_len;
+	unsigned char in_escaped = 0;
+	unsigned char escaped = 0;
+	unsigned char cur_char;
+	int tmp_out_len = 0;
+	if(!data)
+		return -1;
+
+	
+	p_data = data;
+	if(*p_data == 0x7E)
+	{
+		p_data++;
+		len -= 1;
 	}
 
+	if(*(p_data+len-1) == 0x7E)
+	{
+		len -= 1;
+		if(tmp_store_offset != 0)
+		{
+			memcpy(tmp_store_buf + tmp_store_offset, p_data, len);
+			tmp_store_offset += len;
+			len = tmp_store_offset;
+			p_data = tmp_store_buf;
+		}
+		
+	}
+	else
+	{	
+		memcpy(tmp_store_buf + tmp_store_offset, p_data, len);
+		tmp_store_offset += len;
+		//printf("\n***** no end tmp_store_offset:%d***********\n", tmp_store_offset);
+		return -1;
+	}
+	while(len--)
+	{
+		cur_char = *p_data++;
+		escaped = ESCAPE_P(accm, cur_char);
+		
+		if (escaped && (cur_char == PPP_ESCAPE))
+		{
+			in_escaped = 1;
+			continue;
+		}
+		if(in_escaped)
+		{
+			cur_char ^= PPP_TRANS;
+			in_escaped = 0;
+		}
+		*out_buf++ = cur_char;
+		tmp_out_len++;
+		if(tmp_out_len >= out_len)
+		{
+			printf("aoe_convert_ppp_data overflow\n");
+			return -1;
+		}
+	}
+	*out_len = tmp_out_len;
+	//printf("\nin len:%d out len:%d\n", data_len, *out_len);
+	memset(tmp_store_buf, 0, sizeof(tmp_store_buf));
+	tmp_store_offset = 0;
+	return 0;
+
+}
+#endif
+void aoe_pcap_save_packet(pcap_packet_t *packet)
+{
+	
+	tb_byte_t *packet_data = packet->ppp_frame;
+	unsigned int packet_len = packet->frame_len;
+	struct pcap_pkthdr pkt_header;
+	pkt_header.ts.tv_sec = packet->tv.tv_sec;
+	pkt_header.ts.tv_usec = packet->tv.tv_usec;
+	tb_byte_t conver_packet_data[2048] = {0};
+	int conver_len = sizeof(conver_packet_data);
+	tb_byte_t write_data[2048] = {0};
+	char dir = packet->dir;
+#if 1
+	if(aoe_convert_ppp_data(packet->ppp_frame, packet->frame_len, conver_packet_data, &conver_len, packet->accm))
+	{
+		//printf("\n**********store in********\n");
+		return ;
+	}
+	pkt_header.caplen = conver_len + 1;
+	pkt_header.len = conver_len + 1;
+	
+	memcpy(write_data, &pkt_header, sizeof(struct pcap_pkthdr));
+	memcpy(write_data + sizeof(struct pcap_pkthdr), &dir, 1);
+	memcpy(write_data + sizeof(struct pcap_pkthdr) + 1, conver_packet_data, conver_len);
+
+	if(pcap_file)
+	{
+		tb_long_t wb = tb_file_writ(pcap_file, write_data, 1 + sizeof(struct pcap_pkthdr) + conver_len);
+		//printf("sizeof(pcap_pkthdr):%d sizeof(packet_data):%d wb:%d\n", sizeof(struct pcap_pkthdr), sizeof(packet_data), wb);
+	}
+
+#else
+	if(*packet_data == 0x7E)
+	{
+		packet_data++;
+		packet_len -= 1;
+	}
+
+	pkt_header.caplen = packet_len + 1;
+	pkt_header.len = packet_len + 1;
+	
+	memcpy(write_data, &pkt_header, sizeof(struct pcap_pkthdr));
+	memcpy(write_data + sizeof(struct pcap_pkthdr), &dir, 1);
+	memcpy(write_data + sizeof(struct pcap_pkthdr) + 1, conver_packet_data, conver_len);
+	if(pcap_file)
+	{
+		tb_long_t wb = tb_file_writ(pcap_file, write_data, 1 + sizeof(struct pcap_pkthdr) + packet_len);
+		//printf("sizeof(pcap_pkthdr):%d sizeof(packet_data):%d wb:%d\n", sizeof(struct pcap_pkthdr), sizeof(packet_data), wb);
+	}
+#endif
+	
+	
+}
+
+
+void aoe_pcap_queue_get()
+{
+	
+	if(pcap_queue && tb_queue_size(pcap_queue) > 0)
+    {
+    	pcap_packet_t head_packet;
+		memset(&head_packet, 0, sizeof(head_packet));
+    	tb_mutex_enter(pcap_queue_mutex);
+    	pcap_packet_t *new_packet = (pcap_packet_t *)tb_queue_get(pcap_queue);
+		memcpy(&head_packet, new_packet, sizeof(pcap_packet_t));
+		tb_queue_pop(pcap_queue);
+		tb_mutex_leave(pcap_queue_mutex);
+   		//tb_trace_i("aoe_pcap_queue_get size:%d", tb_queue_size(pcap_queue));
+
+		aoe_pcap_save_packet(&head_packet);
+    }
+
+}
+
+int aoe_pcap_file_init()
+{
+	#define PCAP_LOG_HEAD "aoe_log_"
+	#define PCAP_LOG_EXT_NAME ".pcap"
+	
+	tb_tm_t mtime = {0};
+    tb_localtime(tb_time(), &mtime);
+
+
+	tb_char_t path[256] = {0};
+	tb_snprintf(path, sizeof(path), "%s%04ld%02ld%02ld_%02ld%02ld%02ld%s",PCAP_LOG_HEAD,  mtime.year
+        , mtime.month
+        , mtime.mday
+        , mtime.hour
+        , mtime.minute
+        , mtime.second
+        ,PCAP_LOG_EXT_NAME
+        );
+	
+	pcap_file = tb_file_init(path, TB_FILE_MODE_RW | TB_FILE_MODE_CREAT | TB_FILE_MODE_TRUNC);
+	if(pcap_file)
+		tb_trace_i("init file sucess");
+	else
+	{
+		tb_trace_i("init file fail");
+		return -1;
+	}
+
+	
+	
+	//write pcap header
 	struct pcap_file_header pcap_header;
 
 	pcap_header.magic = 0xa1b2c3d4;//0xd4c3b2a1;
@@ -697,40 +930,87 @@ void init_file(int argc, char **argv)
 	pcap_header.thiszone = 0;     
 	pcap_header.sigfigs = 0;
 	pcap_header.snaplen = 8192;
-	pcap_header.linktype = 204;
+	pcap_header.linktype = 204; //todo
 
-	tb_long_t wb = tb_file_writ(test_file, (tb_byte_t *)&pcap_header, sizeof(struct pcap_file_header));
-	printf("wb:%d\n", wb);
-	
+	tb_long_t wb = tb_file_writ(pcap_file, (tb_byte_t *)&pcap_header, sizeof(struct pcap_file_header));
+	return 0;
 }
-void write_file()
+
+int pcap_handle_thread(void *data)
 {
-	
-	tb_byte_t packet_data[] = {0xff,0x03,0xc0,0x21,0x01,0x01,0x00 ,0x14 ,0x02 ,0x06 ,0x00 ,0x00 ,0x00 ,0x00 ,0x05 ,0x06,0xea ,0x67 ,0x6b ,0xc5 ,0x07 ,0x02 ,0x08 ,0x02 ,0x35 ,0x8b};
-	struct pcap_pkthdr pkt_header;
-	pkt_header.ts.tv_sec = 1577275287;
-	pkt_header.ts.tv_usec = 0;
-	pkt_header.caplen = sizeof(packet_data)+1;
-	pkt_header.len = sizeof(packet_data)+1;
-	tb_byte_t write_data[2048] = {0};
-	char dir = 0;
-	memcpy(write_data, &pkt_header, sizeof(struct pcap_pkthdr));
-	memcpy(write_data + sizeof(struct pcap_pkthdr), &dir, 1);
-	memcpy(write_data + sizeof(struct pcap_pkthdr) + 1, packet_data, sizeof(packet_data));
-	
-	if(test_file)
+	while(1)
 	{
-		tb_long_t wb = tb_file_writ(test_file, write_data, 1 + sizeof(struct pcap_pkthdr) + sizeof(packet_data));
-		printf("sizeof(pcap_pkthdr):%d sizeof(packet_data):%d wb:%d\n", sizeof(struct pcap_pkthdr), sizeof(packet_data), wb);
+		aoe_pcap_queue_get();
+		tb_msleep(10);
 	}
+	return 0;
 }
-void close_file()
+int aoe_pcap_init()
 {
-	if(test_file)
-		tb_file_exit(test_file);
+	char pcap_file = aoe_get_log_opt()->pcap_file;
 
-	test_file = NULL;
+	if(!pcap_file)
+	{
+		tb_trace_i("pcap_file disable");
+		return 0;
+	}
+	
+	if(!pcap_queue_mutex)
+		 pcap_queue_mutex = tb_mutex_init();
+
+	if(!pcap_queue_mutex)
+	{
+		tb_trace_i("aoe_pcap_init init mutex fail ");
+		return -1;
+	}
+
+	if(aoe_pcap_file_init())
+	{
+		tb_trace_i("aoe_pcap_init init aoe_pcap_file_init fail ");
+		return -1;
+	}
+
+	pcap_queue = tb_queue_init(PCAP_QUEUE_SIZE, tb_element_mem(sizeof(pcap_packet_t), NULL, NULL));
+	if(!pcap_queue)
+	{
+		tb_trace_i("aoe_pcap_init init pcap_queue fail ");
+		return -1;
+	}
+
+	pcap_file_thread = tb_thread_init("pcap_log", pcap_handle_thread, NULL, 0);
+	if(!pcap_file_thread)
+	{
+		tb_trace_i("aoe_pcap_init init thread fail ");
+		return -1;
+	}
+
+	return 0;
 }
 
 
+
+
+int aoe_test(int argc, char **argv)
+{
+    tb_trace_i("sizeof(struct timeval_d):%d sizeof(tb_timeval_t):%d ", sizeof(struct timeval_d), sizeof(tb_timeval_t));
+	ext_accm accm1 = {0xFF,0xFF,0xFF,0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x60,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+	ext_accm accm2;
+	memcpy(accm2, accm1, sizeof(accm1));
+	tb_trace_i("sizeof accm:%d", sizeof(accm2));
+	tb_trace_i("sizeof ext_accm:%d", sizeof(ext_accm));
+	static int flag = 0;
+	if(flag == 0)
+	{
+		printf("---aoe_pcap_queue_put dump accm---\n");
+		for(int i = 0; i < 32; i++)
+			printf("%02X", accm1[i]);
+		printf("\n");
+		for(int i = 0; i < 32; i++)
+			printf("%02X", accm2[i]);
+		printf("\n---dump accm---\n");
+		//flag = 1;
+	}
+
+    return 0;
+}
 

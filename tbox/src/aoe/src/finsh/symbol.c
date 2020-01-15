@@ -44,10 +44,7 @@ void aoe_init_uart(void);
 
 int cmd_iperf(int argc, char **argv);
 
-void init_file(int argc, char **argv);
-void write_file();
-void close_file();
-
+int aoe_test(int argc, char **argv);
 
 
 #ifdef FINSH_USING_SYMTAB
@@ -75,11 +72,8 @@ struct finsh_syscall _syscall_table[] =
     {"uart_init", aoe_init_uart, "init uart"},
     {"uart_close", aoe_close_uart, "close uart"},
     {"reconfig", aoe_init_configuration, "update config from file"},
-    //test
-    {"init_file", init_file, "init file"},
-    {"write_file", write_file, "write file"},
-    {"close_file", close_file, "close file"},
-    
+
+    {"test",aoe_test, "just for test"},
     {"list", list, "list all command supported"},
 
 };

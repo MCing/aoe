@@ -496,6 +496,7 @@ static err_t ppp_netif_init_cb(struct netif *netif) {
  */
 static err_t ppp_netif_output_ip4(struct netif *netif, struct pbuf *pb, const ip4_addr_t *ipaddr) {
   LWIP_UNUSED_ARG(ipaddr);
+  
   return ppp_netif_output(netif, pb, PPP_IP);
 }
 #endif /* PPP_IPV4_SUPPORT */
@@ -596,7 +597,6 @@ static err_t ppp_netif_output(struct netif *netif, struct pbuf *pb, u16_t protoc
     goto err_rte_drop; /* Cannot really happen, we only negotiate what we are able to do */
   }
 #endif /* CCP_SUPPORT */
-
   err = pcb->link_cb->netif_output(pcb, pcb->link_ctx_cb, pb, protocol);
   goto err;
 
@@ -728,6 +728,7 @@ ppp_pcb *ppp_new(struct netif *pppif, const struct link_callbacks *callbacks, vo
   for (i = 0; (protp = protocols[i]) != NULL; ++i) {
       (*protp->init)(pcb);
   }
+  
 
   new_phase(pcb, PPP_PHASE_DEAD);
   return pcb;
@@ -986,6 +987,7 @@ drop:
 out:
   pbuf_free(pb);
 }
+
 
 /*
  * Write a pbuf to a ppp link, only used from PPP functions

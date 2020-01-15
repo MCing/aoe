@@ -349,8 +349,8 @@ static int initializeInterfaces(void)
 
             /* Set secondary DNS server */
 
-           ppp_set_usepeerdns(ppp, 1);
-
+            ppp_set_usepeerdns(ppp, 1);
+			//ppp_set_neg_asyncmap(ppp, 0);
             /* Auth configuration, this is pretty self-explanatory */
 			
         	ppp_set_auth(ppp, ppp_config->auth_type, ppp_config->user, ppp_config->pwd);
@@ -959,8 +959,8 @@ static void tcp_client_connection_close()
 
 long lwip_tcpsend()
 {
-    char *msgtest="31123134342342342342342342342";
-    tcp_send_message(msgtest,strlen(msgtest));    
+    unsigned char msgtest[]= {0x31, 0x32, 0x7d, 0x33, 0xff, 0x34};
+    tcp_send_message(msgtest, 6);    
 }
 
 int lwipTcpClient(void *param)
@@ -971,7 +971,7 @@ int lwipTcpClient(void *param)
     u8_t rxbuf[1024] = {0};
     char ip[] = {58,60,184,213};
     printf("test 12345\n");
-    tcp_client_connect(ip,12001);
+    tcp_client_connect(ip,12002);
     while(1)
     {
       sys_msleep(100);  

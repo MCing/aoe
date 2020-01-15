@@ -32,6 +32,7 @@
  */
 
 #include "netif/ppp/ppp_opts.h"
+#include "aoe_config.h"
 #if PPP_SUPPORT && PPPOS_SUPPORT /* don't build if not configured for use in lwipopts.h */
 
 #include <string.h>
@@ -165,7 +166,9 @@ ppp_get_fcs(u8_t byte)
 #define PPPOS_UNPROTECT(lev)
 #endif /* PPP_INPROC_IRQ_SAFE */
 
-
+#ifdef AOE_REFACTORING
+extern void aoe_pcap_queue_put(unsigned char *data, int data_len, char dir,ext_accm accm);
+#endif
 /*
  * Create a new PPP connection using the given serial I/O device.
  *
@@ -424,6 +427,11 @@ pppos_input_tcpip(ppp_pcb *ppp, u8_t *s, int l)
 {
   struct pbuf *p;
   err_t err;
+
+  #ifdef AOE_REFACTORING
+  aoe_pcap_queue_put(s, l, 1, ((pppos_pcb *)ppp->link_ctx_cb)->in_accm);
+  #endif
+  
 
   p = pbuf_alloc(PBUF_RAW, l, PBUF_POOL);
   if (!p) {
@@ -830,6 +838,9 @@ pppos_output_append(pppos_pcb *pppos, err_t err, struct pbuf *nb, u8_t c, u8_t a
    * Sure we don't quite fill the buffer if the character doesn't
    * get escaped but is one character worth complicating this? */
   if ((PBUF_POOL_BUFSIZE - nb->len) < 2) {
+#ifdef AOE_REFACTORING
+	  aoe_pcap_queue_put((u8_t*)nb->payload, nb->len, 0, (pppos->out_accm));
+#endif
     u32_t l = pppos->output_cb(pppos->ppp, (u8_t*)nb->payload, nb->len, pppos->ppp->ctx_cb);
     if (l != nb->len) {
       return ERR_IF;
@@ -853,6 +864,9 @@ pppos_output_append(pppos_pcb *pppos, err_t err, struct pbuf *nb, u8_t c, u8_t a
   return ERR_OK;
 }
 
+
+
+
 static err_t
 pppos_output_last(pppos_pcb *pppos, err_t err, struct pbuf *nb, u16_t *fcs)
 {
@@ -869,6 +883,11 @@ pppos_output_last(pppos_pcb *pppos, err_t err, struct pbuf *nb, u16_t *fcs)
 
   /* Send remaining buffer if not empty */
   if (nb->len > 0) {
+
+#ifdef AOE_REFACTORING
+	aoe_pcap_queue_put((u8_t*)nb->payload, nb->len, 0, ((pppos_pcb *)ppp->link_ctx_cb)->out_accm);
+#endif
+  	
     u32_t l = pppos->output_cb(ppp, (u8_t*)nb->payload, nb->len, ppp->ctx_cb);
     if (l != nb->len) {
       err = ERR_IF;

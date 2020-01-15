@@ -28,6 +28,7 @@ typedef struct
 	char tcp_ip_debug;
 	char trace_debug;
 	char log_to_file;
+	char pcap_file;
 }LOG_OPT;
 
 
@@ -38,6 +39,7 @@ extern PPP_OPT *aoe_get_ppp_opt();
 extern int aoe_get_uart_portno();
 extern LOG_OPT *aoe_get_log_opt();
 extern void aoe_init_log_config();
+extern int aoe_pcap_init();
 
 
 
