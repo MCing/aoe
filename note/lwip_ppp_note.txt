@@ -1,0 +1,202 @@
+
+
+【发起PPP请求】
+pppapi_connect
+	pppapi_do_ppp_connect
+		ppp_connect   //Holdoff is the time to wait (in seconds) before initiating the connection
+			magic_randomize
+			ppp_do_connect   //phase： PPP_PHASE_INITIALIZE
+				pppos_connect    
+					ppp_start   //phase： PPP_PHASE_ESTABLISH
+						lcp_open   //config passive/silent
+							fsm_open
+								ppp_write     //【】ppp输出点
+									ppp_dump_packet   //这个点可以debug ppp数据包
+									pppos_write   //【】
+										pppos_output_append
+										pppos_output_last
+											ppp_output_cb
+												sio_write
+						lcp_lowerup
+							fsm_sconfreq
+	
+
+start_networks   //ipcp 开始  PPP_PHASE_NETWORK（9）
+	continue_networks
+		protp->open  //protocols -> ipcp_protent -> ipcp_open
+
+
+fsm_sconfreq
+	ipcp_cilen       //计算请求长度，ipcp_gotoptions 中req_dns1/req_dns2 为0，所以计算出的长度没有包括dns请求
+		ipcp_addci   //没有加入 req_dns1/req_dns2 字段， 上层通过 ppp_set_usepeerdns 设置
+
+	
+【ip 包输出流程】
+ppp_netif_output_ip4
+ppp_netif_output_ip6
+	ppp_netif_output  //这里输出的IP包没有 PPP层协议头
+		pppos_netif_output  //【】添加ppp协议头,FCS,ACCM转换
+		    pppos_output_append
+			pppos_output_last
+				ppp_output_cb
+					sio_write
+						
+
+
+
+
+【PPP输入流程】
+sio_read
+	pppos_input_tcpip
+	  tcpip_inpkt   //post to tcpip_thread
+		pppos_input_sys
+			pppos_input    //解析PPP 协议帧
+			   ppp_input   //传递到对应协议的处理函数
+			      ip4_input
+				  ip6_input
+				  ...
+		
+
+		
+		
+		
+		
+ipcp_options 类型定义如下，有个坑要小心，下面定义中 :1 表示该字段占多少位，虽然定义为unsigned in 但实际只占用1位，一方面可以减少空间，另一方面也限制了该值的取值范围 ，但千万注意，这个不是表示默认值		
+typedef struct ipcp_options {
+    unsigned int neg_addr               :1; /* Negotiate IP Address? */
+    unsigned int old_addrs              :1; /* Use old (IP-Addresses) option? */
+    unsigned int req_addr               :1; /* Ask peer to send IP address? */
+#if 0 /* UNUSED */
+    unsigned int default_route          :1; /* Assign default route through interface? */
+    unsigned int replace_default_route  :1; /* Replace default route through interface? */
+#endif /* UNUSED */
+#if 0 /* UNUSED - PROXY ARP */
+    unsigned int proxy_arp              :1; /* Make proxy ARP entry for peer? */
+#endif /* UNUSED - PROXY ARP */
+#if VJ_SUPPORT
+    unsigned int neg_vj                 :1; /* Van Jacobson Compression? */
+    unsigned int old_vj                 :1; /* use old (short) form of VJ option? */
+    unsigned int cflag                  :1;
+#endif /* VJ_SUPPORT */
+    unsigned int accept_local           :1; /* accept peer's value for ouraddr */
+    unsigned int accept_remote          :1; /* accept peer's value for hisaddr */
+#if LWIP_DNS
+    unsigned int req_dns1               :1; /* Ask peer to send primary DNS address? */
+    unsigned int req_dns2               :1; /* Ask peer to send secondary DNS address? */
+#endif /* LWIP_DNS */
+
+    u32_t ouraddr, hisaddr;	/* Addresses in NETWORK BYTE ORDER */
+#if LWIP_DNS
+    u32_t dnsaddr[2];	/* Primary and secondary MS DNS entries */
+#endif /* LWIP_DNS */
+#if 0 /* UNUSED - WINS */
+    u32_t winsaddr[2];	/* Primary and secondary MS WINS entries */
+#endif /* UNUSED - WINS */
+
+#if VJ_SUPPORT
+    u16_t vj_protocol;		/* protocol value to use in VJ option */
+    u8_t  maxslotindex;		/* values for RFC1332 VJ compression neg. */
+#endif /* VJ_SUPPORT */
+} ipcp_options;
+
+
+
+PRINTPKT_SUPPORT 宏，代开dump
+ppp_dump_packet	 过滤关键字：rcvd|sent		
+						
+						
+						
+/*
+ * Link states.
+ */
+#define PPP_FSM_INITIAL		0	/* Down, hasn't been opened */
+#define PPP_FSM_STARTING	1	/* Down, been opened */
+#define PPP_FSM_CLOSED		2	/* Up, hasn't been opened */
+#define PPP_FSM_STOPPED		3	/* Open, waiting for down event */
+#define PPP_FSM_CLOSING		4	/* Terminating the connection, not open */
+#define PPP_FSM_STOPPING	5	/* Terminating, but open */
+#define PPP_FSM_REQSENT		6	/* We've sent a Config Request */
+#define PPP_FSM_ACKRCVD		7	/* We've received a Config Ack */
+#define PPP_FSM_ACKSENT		8	/* We've sent a Config Ack */
+#define PPP_FSM_OPENED		9	/* Connection available */		
+
+
+
+
+【PPP有限状态机】
+/*
+ * Values for phase.
+ */
+#define PPP_PHASE_DEAD          0
+#define PPP_PHASE_MASTER        1
+#define PPP_PHASE_HOLDOFF       2
+#define PPP_PHASE_INITIALIZE    3
+#define PPP_PHASE_SERIALCONN    4
+#define PPP_PHASE_DORMANT       5
+#define PPP_PHASE_ESTABLISH     6
+#define PPP_PHASE_AUTHENTICATE  7
+#define PPP_PHASE_CALLBACK      8
+#define PPP_PHASE_NETWORK       9
+#define PPP_PHASE_RUNNING       10
+#define PPP_PHASE_TERMINATE     11
+#define PPP_PHASE_DISCONNECT    12
+状态机：
+ * PPP_PHASE_DEAD
+ * PPP_PHASE_HOLDOFF
+ * |   .    .    .
+ * PPP_PHASE_INITIALIZE
+ *  |  .    .    .
+ * PPP_PHASE_ESTABLISH
+ *   | .    .    .
+ *    |.    .    .
+ *     |    .    .
+ * PPP_PHASE_AUTHENTICATE
+ *     |    .    .
+ *     ||   .    .
+ * PPP_PHASE_NETWORK
+ *     | || .    .
+ *     |   |||   .
+ * PPP_PHASE_RUNNING
+ *     |    .|||||
+ *     |    . ||||
+ * PPP_PHASE_TERMINATE
+ *     |    . ||||
+ * PPP_PHASE_NETWORK
+ *    |.         .
+ * PPP_PHASE_ESTABLISH
+ * PPP_PHASE_DISCONNECT
+ * PPP_PHASE_DEAD
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+pppos_output_append  //转换 异步控制字符映射(Asynchronous-Control-Character-Map, ACCM)
+ESCAPE_P  转换规则  RFC1662.PDF 
+
+
+【创建PPP】
+pppapi_pppos_create
+  pppapi_do_pppos_create
+	pppos_create
+	  ppp_new
+        protp->init  //调用protocols 各协议的init
+			lcp_init   //初始化 lcp_wantoptions、lcp_allowoptions
+            ipcp_init
+			...
+
+			
+			
+lcp_up     //lcp_callbacks -> up
+  netif_set_mtu
+  ppp_send_config
+	pppos_send_config 配置accm
+  ppp_recv_config
+  link_established
+	lowerup  //protocols
+	
+
+	
