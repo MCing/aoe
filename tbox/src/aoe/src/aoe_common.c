@@ -29,6 +29,7 @@
 #define JSON_KW_LOG_TRACE_DEBUG 	"trace_debug"
 #define JSON_KW_LOG_TO_FILE 	    "log_to_file"
 #define JSON_KW_LOG_PCAP_FILE	    "pcap_file"
+#define JSON_KW_LOG_PPP_DUMP	    "ppp_frame_dump"
 
 
 
@@ -382,6 +383,17 @@ int parse_log_configuration(char *conf_file)
 			printf("INFO: JSON_KW_LOG_PCAP_FILE:%d\n", (int)json_value_get_number(val));
 			log_option.pcap_file = (int)json_value_get_number(val);
 		}
+
+		val = json_object_get_value(conf, JSON_KW_LOG_PPP_DUMP); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONNumber) 
+		{
+			printf("INFO: no configuration for JSON_KW_LOG_PPP_DUMP\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_LOG_PPP_DUMP:%d\n", (int)json_value_get_number(val));
+			log_option.ppp_frame_dump = (int)json_value_get_number(val);
+		}
 	
 
 	}while(0);
@@ -433,6 +445,7 @@ void save_config()
 	json_object_set_number(obj, JSON_KW_LOG_TRACE_DEBUG, log_option.trace_debug);
 	json_object_set_number(obj, JSON_KW_LOG_TO_FILE, log_option.log_to_file);
 	json_object_set_number(obj, JSON_KW_LOG_PCAP_FILE, log_option.pcap_file);
+	json_object_set_number(obj, JSON_KW_LOG_PPP_DUMP, log_option.ppp_frame_dump);
 	
 
 	//all in
@@ -708,17 +721,20 @@ tb_thread_ref_t pcap_file_thread = NULL;
 
 void aoe_pcap_queue_put(unsigned char *data, int data_len, char dir,ext_accm accm)
 {
-#define PPP_FRAME_DUMP 0
-#if PPP_FRAME_DUMP
+
+	if(aoe_get_log_opt()->ppp_frame_dump)
+	{
+		char ppp_dump[4096] = {0};
 		if(dir == 0)
-			printf("\n------ppp out dump------\n");
+			tb_trace_i("------ppp out dump------");
 		else
-			printf("\n------ppp in dump------\n");
+			tb_trace_i("------ppp in dump------");
 	
 		for(int i = 0; i < data_len; i++)
-			printf("%02X", data[i]);
-		printf("\n----------------\n");
-#endif
+			snprintf(ppp_dump + i, sizeof(ppp_dump) - i, "%02X", data[i]);
+		tb_trace_i("dump:%s", ppp_dump);
+		
+	}
 
 	if(!pcap_queue)
 		return;

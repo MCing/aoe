@@ -29,6 +29,7 @@ typedef struct
 	char trace_debug;
 	char log_to_file;
 	char pcap_file;
+	char ppp_frame_dump;
 }LOG_OPT;
 
 

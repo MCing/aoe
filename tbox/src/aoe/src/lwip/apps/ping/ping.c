@@ -177,11 +177,10 @@ long ping(char* target_name, unsigned long times, unsigned long size)
 
         if (lwip_ping_send(s, &target_addr, size) == ERR_OK)
         {
-            //recv_start_tick = rt_tick_get();
+            recv_start_tick = sys_now();
             if ((recv_len = lwip_ping_recv(s, &ttl)) >= 0)
             {
-                //elapsed_time = (rt_tick_get() - recv_start_tick) * 1000UL / RT_TICK_PER_SECOND;
-				elapsed_time = 0;  //TODO;
+                elapsed_time = (sys_now() - recv_start_tick);
                 printf("%d bytes from %s icmp_seq=%d ttl=%d time=%d ms\n", recv_len, inet_ntoa(ina), send_times,
                         ttl, elapsed_time);
             }
@@ -202,7 +201,7 @@ long ping(char* target_name, unsigned long times, unsigned long size)
             break;
         }
 
-        //rt_thread_delay(PING_DELAY); /* take a delay */
+        sys_msleep(1000); /* take a delay */
     }
 
     lwip_close(s);
@@ -213,14 +212,24 @@ long ping(char* target_name, unsigned long times, unsigned long size)
 
 int cmd_ping(int argc, char **argv)
 {
+	char* target_name = NULL;
+	unsigned long times = 4;
+	unsigned long size = 0;
+	
     if (argc == 1)
     {
-        printf("Please input: ping <host address>\n");
+        printf("Please input: ping <host address> [<times>[,<size>]]\n");
     }
-    else
-    {
-        ping(argv[1], 4, 0);
-    }
+    if(argc >=2)
+		target_name = argv[1];
+
+	if(argc >=3)
+		times = atoi(argv[2]);
+
+	if(argc >=4)
+		size = atoi(argv[3]);
+
+    ping(target_name, times, size);
 
     return 0;
 }

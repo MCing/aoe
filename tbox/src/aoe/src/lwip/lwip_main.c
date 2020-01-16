@@ -959,8 +959,11 @@ static void tcp_client_connection_close()
 
 long lwip_tcpsend()
 {
-    unsigned char msgtest[]= {0x31, 0x32, 0x7d, 0x33, 0xff, 0x34};
-    tcp_send_message(msgtest, 6);    
+    unsigned char msgtest[1024]= {0x31, 0x32, 0x33};
+	for(int i = 3; i < 1000; i++)
+		msgtest[i] = 0xff;
+	
+    tcp_send_message(msgtest, 1000);    
 }
 
 int lwipTcpClient(void *param)
