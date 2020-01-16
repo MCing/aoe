@@ -45,6 +45,10 @@ void aoe_init_uart(void);
 int cmd_iperf(int argc, char **argv);
 
 int aoe_test(int argc, char **argv);
+int cmd_tcp(int argc, char **argv);
+int cmd_tcp_send(int argc, char **argv);
+int cmd_tcp_close();
+
 
 
 #ifdef FINSH_USING_SYMTAB
@@ -67,6 +71,9 @@ struct finsh_syscall _syscall_table[] =
 	{"at", at, "enter at debug mode"},
     {"ping", cmd_ping, "ping program"},
     {"iperf", cmd_iperf, "iperf test"},
+    {"tcp_setup", cmd_tcp, "tcp test"},
+    {"tcp_send", cmd_tcp_send, "tcp test"},
+    {"tcp_close", cmd_tcp_close, "tcp test"},
 
     //{"uart_state", uart_state},
     {"uart_init", aoe_init_uart, "init uart"},

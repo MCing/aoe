@@ -973,7 +973,6 @@ int lwipTcpClient(void *param)
     int count = 0;
     u8_t rxbuf[1024] = {0};
     char ip[] = {58,60,184,213};
-    printf("test 12345\n");
     tcp_client_connect(ip,12002);
     while(1)
     {

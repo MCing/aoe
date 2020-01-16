@@ -41,6 +41,17 @@ struct _ip_addr
     unsigned char addr0, addr1, addr2, addr3;
 };
 
+#define PING_THREAD_NAME               "ping_thread"
+typedef struct
+{
+	
+	char target_name[256];
+	int ping_time;
+	int ping_size;
+}ping_param_t;
+ping_param_t ping_opt;
+
+
 /** Prepare a echo ICMP request */
 static void ping_prepare_echo( struct icmp_echo_hdr *iecho, u16_t len)
 {
@@ -122,6 +133,7 @@ int lwip_ping_recv(int s, int *ttl)
 }
 
 
+
 /* using the lwIP custom ping */
 long ping(char* target_name, unsigned long times, unsigned long size)
 {
@@ -171,6 +183,10 @@ long ping(char* target_name, unsigned long times, unsigned long size)
 
     lwip_setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
+	int max_time = 0;
+	int min_time = 0xffff;
+	long total_time_ms = 0;
+	int timeout_count = 0;
     while (1)
     {
         int elapsed_time;
@@ -181,12 +197,16 @@ long ping(char* target_name, unsigned long times, unsigned long size)
             if ((recv_len = lwip_ping_recv(s, &ttl)) >= 0)
             {
                 elapsed_time = (sys_now() - recv_start_tick);
-                printf("%d bytes from %s icmp_seq=%d ttl=%d time=%d ms\n", recv_len, inet_ntoa(ina), send_times,
+                printf("%d bytes from %s icmp_seq=%d ttl=%d time=%d ms\n", recv_len, inet_ntoa(ina), send_times + 1,
                         ttl, elapsed_time);
+				total_time_ms += elapsed_time;
+				min_time = (min_time > elapsed_time) ? elapsed_time : min_time;
+				max_time = (max_time < elapsed_time) ? elapsed_time : max_time;
             }
             else
             {
-                printf("From %s icmp_seq=%d timeout\n", inet_ntoa(ina), send_times);
+                printf("From %s icmp_seq=%d timeout\n", inet_ntoa(ina), send_times + 1);
+				timeout_count++;
             }
         }
         else
@@ -201,35 +221,56 @@ long ping(char* target_name, unsigned long times, unsigned long size)
             break;
         }
 
-        sys_msleep(1000); /* take a delay */
+        sys_msleep(100); /* take a delay */
     }
-
-    lwip_close(s);
+	//printf("\n--------------ping statistics----------------\n");
+	printf("\n----------------\n min:%dms \n ave:%dms \n max:%dms \n timeout:%d times \n------------------\n",
+	       min_time, total_time_ms/(send_times - timeout_count), max_time, timeout_count);
+	//printf("\n---------------------------------------------\n");
+	lwip_close(s);
 
     return 0;
 }
+
+
+void ping_thread(void *arg)
+{
+	if(!arg)
+		return;
+	
+	ping_param_t *opt = (ping_param_t*)arg;
+	
+	ping(opt->target_name,  opt->ping_time, opt->ping_size);
+}
+
 #ifdef RT_USING_FINSH
+#define DEFAULT_PING_TIME 4
+#define DEFUALT_PING_SIZE 0
 
 int cmd_ping(int argc, char **argv)
 {
-	char* target_name = NULL;
-	unsigned long times = 4;
-	unsigned long size = 0;
 	
     if (argc == 1)
     {
         printf("Please input: ping <host address> [<times>[,<size>]]\n");
     }
-    if(argc >=2)
-		target_name = argv[1];
+
+	ping_opt.ping_time = DEFAULT_PING_TIME;
+	ping_opt.ping_size = DEFUALT_PING_SIZE;
+	
+    if(argc >=2 )
+    {
+		memset(ping_opt.target_name, 0, sizeof(ping_opt.target_name));
+		memcpy(ping_opt.target_name, argv[1], sizeof(ping_opt.target_name) - 1);
+	}
 
 	if(argc >=3)
-		times = atoi(argv[2]);
+		ping_opt.ping_time = atoi(argv[2]);
 
 	if(argc >=4)
-		size = atoi(argv[3]);
+		ping_opt.ping_size = atoi(argv[3]);
 
-    ping(target_name, times, size);
+	sys_thread_new(PING_THREAD_NAME, ping_thread, &ping_opt, 0, 0);
 
     return 0;
 }
