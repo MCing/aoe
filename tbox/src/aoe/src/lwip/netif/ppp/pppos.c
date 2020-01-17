@@ -336,6 +336,11 @@ pppos_connect(ppp_pcb *ppp, void *ctx)
   extern char aoe_enbale_accm_ff();
   if(aoe_enbale_accm_ff())
   {
+  	//if we want to add 0xff in accm, how to determin the value in out_accm?
+  	//should flllow the rule in ESCAPE_P
+  	//1. 0xff/8 = 31   , so it should be in out_accm
+  	//2. 1 << (0xff & 0x07) = 0x80   ,so the result is out_accm[31]=0x80
+  	//have you get it ?
 	pppos->out_accm[31] = 0x80;
   }
   #endif
