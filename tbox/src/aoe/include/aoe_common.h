@@ -20,6 +20,7 @@ typedef struct
 	//unsigned int lcp_echo_adaptive;
 	unsigned char lcp_echo_interval;
 	unsigned char lcp_echo_fails;
+	unsigned char enable_accm_ff;
 }PPP_OPT;
 
 typedef struct

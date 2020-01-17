@@ -22,6 +22,8 @@
 //#define JSON_KW_PPP_ECHO_ADPT 	"lcp_echo_adaptive"
 #define JSON_KW_PPP_ECHO_INTERVAL 	"lcp_echo_interval"
 #define JSON_KW_PPP_ECHO_FAILS 		"lcp_echo_fails"
+#define JSON_KW_PPP_ACCM_FF 		"enable_accm_ff"
+
 
 #define JSON_KW_LOG 				"debug log"
 #define JSON_KW_LOG_PPP_DEBUG 		"ppp_debug"
@@ -47,6 +49,7 @@ static PPP_OPT ppp_option = { \
 	 "cmnet",
 	 0,   //LCP_ECHOINTERVAL
 	 3,   //LCP_MAXECHOFAILS
+	 0,   //enable 0xff in accm
 	 };
 
 static LOG_OPT log_option = {\
@@ -290,6 +293,19 @@ int parse_ppp_configuration(char *conf_file)
 			printf("INFO: JSON_KW_PPP_ECHO_FAILS:%d\n", (int)json_value_get_number(val));
 			ppp_option.lcp_echo_fails = (int)json_value_get_number(val);
 		}
+
+		val = json_object_get_value(conf, JSON_KW_PPP_ACCM_FF); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONNumber) 
+		{
+			printf("INFO: no configuration for JSON_KW_PPP_ACCM_FF\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_PPP_ACCM_FF:%d\n", (int)json_value_get_number(val));
+			ppp_option.enable_accm_ff = (int)json_value_get_number(val);
+		}
+
+		
 	}while(0);
 	
 	if(root_val)
@@ -435,7 +451,9 @@ void save_config()
 	json_object_set_string(obj, JSON_KW_PPP_APN, ppp_option.apn);
 	json_object_set_number(obj, JSON_KW_PPP_ECHO_INTERVAL, ppp_option.lcp_echo_interval);
 	json_object_set_number(obj, JSON_KW_PPP_ECHO_FAILS, ppp_option.lcp_echo_fails);
+	json_object_set_number(obj, JSON_KW_PPP_ACCM_FF, ppp_option.enable_accm_ff);
 
+	
 
 	//log config
 	log = json_value_init_object();
@@ -470,6 +488,11 @@ void aoe_init_configuration()
 	if(result)
 		save_config();
 
+}
+
+char aoe_enbale_accm_ff()
+{
+	return aoe_get_ppp_opt()->enable_accm_ff;
 }
 
 
@@ -731,7 +754,7 @@ void aoe_pcap_queue_put(unsigned char *data, int data_len, char dir,ext_accm acc
 			tb_trace_i("------ppp in dump------");
 	
 		for(int i = 0; i < data_len; i++)
-			snprintf(ppp_dump + i, sizeof(ppp_dump) - i, "%02X", data[i]);
+			snprintf(ppp_dump + i*2, sizeof(ppp_dump) - i, "%02X", data[i]);
 		tb_trace_i("dump:%s", ppp_dump);
 		
 	}

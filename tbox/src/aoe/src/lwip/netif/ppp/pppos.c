@@ -332,6 +332,13 @@ pppos_connect(ppp_pcb *ppp, void *ctx)
    */
   pppos->in_accm[15] = 0x60; /* no need to protect since RX is not running */
   pppos->out_accm[15] = 0x60;
+  #ifdef AOE_REFACTORING
+  extern char aoe_enbale_accm_ff();
+  if(aoe_enbale_accm_ff())
+  {
+	pppos->out_accm[31] = 0x80;
+  }
+  #endif
   PPPOS_PROTECT(lev);
   pppos->open = 1;
   PPPOS_UNPROTECT(lev);

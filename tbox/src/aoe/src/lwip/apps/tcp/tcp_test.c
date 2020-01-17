@@ -410,9 +410,17 @@ unsigned char send_data[2048] = {0};
 int hexstr2hex(char *s, char *d, int len)
 {
 	//todo
-	memcpy(d, s, strlen(s));
-	len = strlen(s);
-	return len;
+	int i = 0;
+	for(i = 0; i < strlen(s)/2; i++)
+	{
+		unsigned char ch;
+		sscanf(s + 2*i, "%02x", &ch);
+		if(i + 1 == len)
+			break;
+		d[i] = ch;
+	}
+	
+	return i;
 }
 int cmd_tcp_send(int argc, char **argv)
 {
@@ -422,6 +430,7 @@ int cmd_tcp_send(int argc, char **argv)
         printf("Please input: tcp_send <data_in_hex>\n");
 		return -1;
     }
+	
 	if(es && es->state == ES_CONNECTED)
 	{
 		len = hexstr2hex(argv[1], send_data, sizeof(send_data));
