@@ -59,7 +59,7 @@ ppp authtype:
 
 
 ppp问题：
-VJ header compression   ？？？？
+VJ header compression   -->ip头部压缩
 
 
 local  IP address 10.20.161.162
@@ -72,7 +72,6 @@ lwipopts.h   //lwip 相关log开关
 ppp主动断开流程分析
 
 
-lwip 移植到windows，需要做什么？？
 
 
 done list:
@@ -81,6 +80,7 @@ done list:
 #【A】ipcp 流程没有请求 dns 问题
 ------上层可设置
 #【A】优化ping 指令
+-----优化显示时间
 
 todo list: update 20200111
 #【B】优化速率 
@@ -88,7 +88,10 @@ todo list: update 20200111
   总结影响速率的因素
 #【B】支持高波特率921600
 #【B】根据linux ppp配置添加配置
-
+#【B】pcap 存log功能模块不稳定，长期ping过程会crash
+#【B】Read response buffer failed. The Response buffer size is out of buffer size(16)!
+#【B】ppp断开时间长
+#【C】是能rt-thread 的dump log功能
 
 
 
