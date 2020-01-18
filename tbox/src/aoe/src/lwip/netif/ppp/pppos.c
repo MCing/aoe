@@ -229,7 +229,14 @@ pppos_write(ppp_pcb *ppp, void *ctx, struct pbuf *p)
   /* If the link has been idle, we'll send a fresh flag character to
    * flush any noise. */
   err = ERR_OK;
+  #ifdef AOE_REFACTORING
+  //sys_now only get the lwip up time,if we setup ppp call after lwip init,the first packet may lack PPP_FLAG
+  //so we allow to add PPP_FLAG at first ppp packet
+  if (pppos->last_xmit == 0 || (sys_now() - pppos->last_xmit) >= PPP_MAXIDLEFLAG) {
+  #else
   if ((sys_now() - pppos->last_xmit) >= PPP_MAXIDLEFLAG) {
+  #endif
+  
     err = pppos_output_append(pppos, err,  nb, PPP_FLAG, 0, NULL);
   }
 
