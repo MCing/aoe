@@ -156,6 +156,8 @@
 								   	break; \
 								   if(((debug) & (LWIP_DBG_TRACE)) && !AOE_TRACE_DEBUG) \
 								   	break; \
+								   	if(((debug) & (LWIP_DBG_STATE)) && !AOE_TRACE_DEBUG) \
+								   	break; \
                                  LWIP_PLATFORM_DIAG(message); \
                                  if ((debug) & LWIP_DBG_HALT) { \
                                    while(1); \

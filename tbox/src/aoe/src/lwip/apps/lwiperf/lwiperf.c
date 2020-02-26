@@ -874,6 +874,43 @@ int cmd_iperf(int argc, char **argv)
 
     return 0;
 }
+
+
+static char test_iperf_running = 0;
+void test_lwiperf_report(void *arg, enum lwiperf_report_type report_type,
+  const ip_addr_t* local_addr, u16_t local_port, const ip_addr_t* remote_addr, u16_t remote_port,
+  u32_t bytes_transferred, u32_t ms_duration, u32_t bandwidth_kbitpsec)
+{
+	printf("-----iperf report-------\n");
+	printf("local_port:%d remote_port:%d\n", local_port, remote_port);
+	printf("transferred:%d bytes\nbandwidth:%d kbps\nused:%d ms\n", bytes_transferred, bandwidth_kbitpsec, ms_duration);
+	printf("------------------------\n");
+    test_iperf_running = 0;
+}
+
+int test_iperf(char *url, int port)
+{
+
+	//string ip conver to ip_addr_t ip
+	ip_addr_t remote_addr;
+	u16_t remote_port;
+	if(0 == ipaddr_aton(url, &remote_addr))
+	{
+	 	printf("invalid addr\n");
+		return -1;
+	}
+	remote_port = port;
+    if(NULL == lwiperf_start_tcp_client(((ip4_addr_t*)&remote_addr), remote_port, LWIPERF_CLIENT, test_lwiperf_report, NULL))
+        return -1;
+    
+    test_iperf_running = 1;
+    while(test_iperf_running)
+    {
+        sys_msleep(100);
+    }
+    return 0;
+}
+
 #endif /* RT_USING_FINSH */
 
 

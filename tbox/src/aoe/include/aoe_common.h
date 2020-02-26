@@ -1,7 +1,7 @@
 #ifndef _AOE_COMMON_H_
 #define _AOE_COMMON_H_
 
-
+#include "aoe_config.h"
 
 typedef struct
 {
@@ -34,6 +34,26 @@ typedef struct
 	char ppp_frame_dump;
 }LOG_OPT;
 
+
+#ifdef ATEST_CONFIG
+
+typedef struct
+{
+    //ping test
+    int ping_enable;
+    char ping_hostname[128];
+    int ping_times;
+
+    //ping test
+    int iperf_enable;
+    char iperf_hostname[128];
+    int iperf_port;
+
+    //other test
+    
+}ATEST_OPT;
+
+#endif
 
 
 extern void aoe_init_configuration();

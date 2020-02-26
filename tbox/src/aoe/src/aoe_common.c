@@ -36,7 +36,21 @@
 #define JSON_KW_LOG_PCAP_FILE	    "pcap_file"
 #define JSON_KW_LOG_PPP_DUMP	    "ppp_frame_dump"
 
+#ifdef ATEST_CONFIG
+//test item
+#define JSON_KW_ATEST               "test opt"
 
+//ping test
+#define JSON_KW_PING_TEST           "ping_enable"
+#define JSON_KW_PING_HOST           "ping_hostname"
+#define JSON_KW_PING_TIMES          "ping_times"
+
+//iperf test
+#define JSON_KW_IPERF_TEST           "iperf_enable"
+#define JSON_KW_IPERF_HOST           "iperf_hostname"
+#define JSON_KW_IPERF_PORT           "iperf_port"
+
+#endif
 
 
 
@@ -62,6 +76,15 @@ static LOG_OPT log_option = {\
 	0,
 	0
 	};
+
+#ifdef ATEST_CONFIG
+    
+static ATEST_OPT atest_opt = {  \
+                               1, "www.baidu.com", 10  //ping test options
+                               ,1,"58.60.184.213", 11998 //iperf test options
+                             };
+#endif
+
 
 int aoe_get_uart_portno()
 {
@@ -89,6 +112,13 @@ LOG_OPT *aoe_get_log_opt()
 {
 	return &log_option;
 }
+
+#ifdef ATEST_CONFIG
+ATEST_OPT *aoe_get_test_opt()
+{
+	return &atest_opt;
+}
+#endif
 
 
 void test_print_options()
@@ -434,6 +464,113 @@ int parse_log_configuration(char *conf_file)
 	return result;
 }
 
+#ifdef ATEST_CONFIG
+int parse_atest_configuration(char *conf_file)
+{
+
+    const char conf_obj[] = JSON_KW_ATEST;
+    JSON_Value *root_val;
+    JSON_Object *root = NULL;
+    JSON_Object *conf = NULL;
+    JSON_Value *val;
+    int result = 0;
+
+	do
+	{
+		/* try to parse JSON */
+		root_val = json_parse_file_with_comments(conf_file);
+		root = json_value_get_object(root_val);
+		if (root == NULL) {
+			printf("ERROR: %s id not a valid JSON file\n", conf_file);
+			result = -1;
+			break;
+		}
+		conf = json_object_get_object(root, conf_obj);
+		if (conf == NULL) {
+			printf("INFO: %s does not contain a JSON object named %s\n", conf_file, conf_obj);
+			result = -1;
+			break;
+		} else {
+			printf("INFO: %s does contain a JSON object named %s, parsing parameters\n", conf_file, conf_obj);
+		}
+        //-------ping test options---------
+		val = json_object_get_value(conf, JSON_KW_PING_TEST); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONNumber) 
+		{
+			printf("INFO: no configuration for JSON_KW_PING_TEST\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_PING_TEST:%d\n", (int)json_value_get_number(val));
+			atest_opt.ping_enable = (int)json_value_get_number(val);
+		}
+
+		val = json_object_get_value(conf, JSON_KW_PING_HOST); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONString) 
+		{
+			printf("INFO: no configuration for JSON_KW_PING_HOST\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_PING_HOST:%s\n", json_value_get_string(val));
+			memset(atest_opt.ping_hostname, 0, sizeof(atest_opt.ping_hostname));
+			strcpy(atest_opt.ping_hostname,  json_value_get_string(val));
+		}
+
+		val = json_object_get_value(conf, JSON_KW_PING_TIMES); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONNumber) 
+		{
+			printf("INFO: no configuration for JSON_KW_PING_TIMES\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_PING_TIMES:%d\n", (int)json_value_get_number(val));
+			atest_opt.ping_times = (int)json_value_get_number(val);
+		}
+
+        //-------iperf test options---------
+        val = json_object_get_value(conf, JSON_KW_IPERF_TEST); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONNumber) 
+		{
+			printf("INFO: no configuration for JSON_KW_IPERF_TEST\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_IPERF_TEST:%d\n", (int)json_value_get_number(val));
+			atest_opt.iperf_enable = (int)json_value_get_number(val);
+		}
+
+		val = json_object_get_value(conf, JSON_KW_IPERF_HOST); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONString) 
+		{
+			printf("INFO: no configuration for JSON_KW_IPERF_HOST\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_IPERF_HOST:%s\n", json_value_get_string(val));
+			memset(atest_opt.iperf_hostname, 0, sizeof(atest_opt.iperf_hostname));
+			strcpy(atest_opt.iperf_hostname,  json_value_get_string(val));
+		}
+
+		val = json_object_get_value(conf, JSON_KW_IPERF_PORT); /* fetch value (if possible) */
+		if (json_value_get_type(val) != JSONNumber) 
+		{
+			printf("INFO: no configuration for JSON_KW_IPERF_PORT\n");
+		}
+		else
+		{
+			printf("INFO: JSON_KW_IPERF_PORT:%d\n", (int)json_value_get_number(val));
+			atest_opt.iperf_port = (int)json_value_get_number(val);
+		}
+        
+	}while(0);
+	
+	if(root_val)
+		json_value_free(root_val);
+	
+	return result;
+}
+#endif
 
 
 void save_config()
@@ -443,6 +580,7 @@ void save_config()
 	JSON_Value *uart = NULL;
 	JSON_Value *ppp = NULL;
 	JSON_Value *log = NULL;
+    JSON_Value *atest = NULL;
 	
 	JSON_Object *obj = NULL;
 	
@@ -479,7 +617,22 @@ void save_config()
 	json_object_set_number(obj, JSON_KW_LOG_TO_FILE, log_option.log_to_file);
 	json_object_set_number(obj, JSON_KW_LOG_PCAP_FILE, log_option.pcap_file);
 	json_object_set_number(obj, JSON_KW_LOG_PPP_DUMP, log_option.ppp_frame_dump);
-	
+
+#ifdef ATEST_CONFIG
+
+    //atest config
+    atest = json_value_init_object();
+    obj = json_value_get_object(atest);
+    json_object_set_number(obj, JSON_KW_PING_TEST, atest_opt.ping_enable);
+    json_object_set_string(obj, JSON_KW_PING_HOST, atest_opt.ping_hostname);
+    json_object_set_number(obj, JSON_KW_PING_TIMES, atest_opt.ping_enable);
+
+    //iperf config
+    json_object_set_number(obj, JSON_KW_IPERF_TEST, atest_opt.iperf_enable);
+    json_object_set_string(obj, JSON_KW_IPERF_HOST, atest_opt.iperf_hostname);
+    json_object_set_number(obj, JSON_KW_IPERF_PORT, atest_opt.iperf_port);
+#endif
+
 
 	//all in
 	root = json_value_init_object();
@@ -487,6 +640,9 @@ void save_config()
 	json_object_set_value(obj, JSON_KW_UART, uart);
 	json_object_set_value(obj, JSON_KW_PPP, ppp);
 	json_object_set_value(obj, JSON_KW_LOG, log);
+#ifdef ATEST_CONFIG
+    json_object_set_value(obj, JSON_KW_ATEST, atest);
+#endif
 
 	json_serialize_to_file_pretty(root, filename);
 
@@ -498,6 +654,11 @@ void aoe_init_configuration()
 	result += parse_uart_configuration(CONFIG_FILE, 0);
 	result += parse_ppp_configuration(CONFIG_FILE);
 	result += parse_log_configuration(CONFIG_FILE);
+    
+#ifdef ATEST_CONFIG
+    //test item
+    result += parse_atest_configuration(CONFIG_FILE);
+#endif
 
 	printf("aoe_init_configuration result:%d\n", result);
 	if(result)
@@ -1072,4 +1233,28 @@ int aoe_test(int argc, char **argv)
 
     return 0;
 }
+
+
+
+int atest_ping()
+{
+    if(atest_opt.ping_enable)
+    {
+        ping(atest_opt.ping_hostname, atest_opt.ping_times, 32);
+    }
+    return 0;
+
+}
+
+extern int test_iperf(char *url, int port);
+int atest_iperf()
+{
+    if(atest_opt.iperf_enable)
+    {
+        test_iperf(atest_opt.iperf_hostname, atest_opt.iperf_port);
+    }
+    return 0;
+
+}
+
 

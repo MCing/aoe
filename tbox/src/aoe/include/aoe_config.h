@@ -28,6 +28,8 @@ extern "C"
 
 #define FINSH_ARG_MAX 10
 
+#define ATEST_CONFIG
+
 
 #endif
 #ifdef __cplusplus

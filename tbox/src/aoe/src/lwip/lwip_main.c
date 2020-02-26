@@ -17,9 +17,6 @@
 #include "lwip/apps/mdns.h"
 #include "netif/ppp/ppp_opts.h"
 
-#if LWIP_USING_NAT
-#include "lwip_nat/ipv4_nat.h"
-#endif
 
 #if PPP_SUPPORT
 /* PPP includes */
@@ -90,10 +87,6 @@ u8_t sio_idx = 3;
 sio_fd_t ppp_sio;
 #endif /* USE_PPP */
 
-#if LWIP_USING_NAT
-ip_nat_entry_t nat_entry;
-static void initializeNAT();
-#endif
 
 //#include "interfaces.h"
 
@@ -138,9 +131,6 @@ static void pppLinkStatusCallback(ppp_pcb *pcb, int errCode, void *ctx)
             pppConnected = true;
 
 
-			#if LWIP_USING_NAT
-			initializeNAT();
-			#endif
 
             break;
         }
@@ -216,6 +206,7 @@ static void pppLinkStatusCallback(ppp_pcb *pcb, int errCode, void *ctx)
 	//debug
 	if(errCode != PPPERR_NONE)
 	{
+	    pppConnected = false;
 		pppapi_free(ppp);
         puts("ppp closed.\n");
         ppp = NULL;
@@ -251,10 +242,6 @@ static void status_callback(struct netif *state_netif)
     {
 #if LWIP_IPV4
         printf("status_callback==UP, local interface IP is %s\n", ip4addr_ntoa(netif_ip4_addr(state_netif)));
-#if LWIP_USING_NAT
-
-        initializeNAT();
-#endif
 #if LWIP_MDNS_RESPONDER
         mdns_resp_netif_settings_changed(state_netif);
 //        }
@@ -264,9 +251,6 @@ static void status_callback(struct netif *state_netif)
     {
         printf("status_callback==DOWN\n");
 
-#if LWIP_USING_NAT
-        ip_nat_remove(&nat_entry);
-#endif
     }
 
 }
@@ -384,45 +368,6 @@ static int initializeInterfaces(void)
 }
 
 
-#if LWIP_USING_NAT
-
-static void initializeNAT()
-{
-    static bool natInitialized = false;
-
-    if (!natInitialized)
-    {
-        if (!pppConnected)
-        {
-            return;
-        }
-
-        if (dhcp && !dhcp_supplied_address(&netif))
-        {
-            return;
-        }
-
-        ADAPTER_ADDR = netif.ip_addr.addr;
-        createRoute(hisAddr.addr, ADAPTER_ADDR);
-
-        printf("\n\n\n!!!NAT!!!\n\n\n");
-        nat_entry.out_if = (struct netif *) &netif;
-        nat_entry.in_if = (struct netif *) &ppp_netif;
-        nat_entry.source_net = hisAddr;
-        nat_entry.dest_net.addr = ADAPTER_ADDR;
-        nat_entry.dest_netmask.addr = ADAPTER_MASK;
-        IP4_ADDR(&nat_entry.source_netmask, 255, 255, 255, 0);
-        printf("nat_entry.source_net.addr = %u\n", nat_entry.source_net.addr);
-        printf("nat_entry.dest_net.addr = %u\n", nat_entry.dest_net.addr);
-        printf("nat_entry.dest_netmask.addr = %u\n", nat_entry.dest_netmask.addr);
-        ip_nat_add(&nat_entry);
-        printf("nat_entry.source_netmask.addr = %u\n", nat_entry.source_netmask.addr);
-
-        natInitialized = true;
-    }
-}
-
-#endif
 
 
 //#if LWIP_DNS_APP && LWIP_DNS
@@ -579,6 +524,29 @@ static void tcpipInitCallback(void *arg)
     sys_sem_signal(init_sem);
 }
 
+void aoe_lwip_init()
+{
+    if (!lwipInitialized)
+    {
+
+        err_t err = 0;
+        sys_sem_t init_sem = {0};
+        /* initialize lwIP stack, network interfaces and applications */
+        err = sys_sem_new(&init_sem, 0);
+        LWIP_ASSERT("failed to create init_sem", err == ERR_OK);
+        LWIP_UNUSED_ARG(err);
+        tcpip_init(tcpipInitCallback, &init_sem);
+        /* we have to wait for initialization to finish before
+         * calling update_adapter()! */
+        sys_sem_wait(&init_sem);
+        sys_sem_free(&init_sem);
+
+        lwipInitialized = true;
+    }
+
+}
+
+
 int lwipInit()
 {
     if (!lwipInitialized)
@@ -633,17 +601,15 @@ int lwipLoop(void *param)
 		if(ppp_mode_inused() == 0)
 			continue;
 
+        if(!ppp)
+            break;
+
         /* try to read characters from serial line and pass them to PPPoS */
         count = sio_read(ppp_sio, (u8_t *) rxbuf, 1024);
 	
         if (count > 0)
         {
             pppos_input_tcpip(ppp, rxbuf, count);
-        }
-        else
-        {
-            /* nothing received, give other tasks a chance to run */
-            sys_msleep(1);
         }
 
         if (callClosePpp && ppp)
@@ -654,7 +620,7 @@ int lwipLoop(void *param)
             //pppapi_free(ppp);
             //puts("ppp closed.\n");
             //ppp = NULL;
-            break;
+            //break;
         }
     }
 
@@ -983,5 +949,42 @@ int lwipTcpClient(void *param)
           tcpRecevieFlag--;
         }
     }
+}
+
+extern long lwip_ppp(void);
+int atest_setup_ppp(int timeout_s)
+{
+    #define TIME_STEP_MS 100
+    int time_counter = timeout_s * 1000;
+    if(lwip_ppp())
+        return -1;
+
+    while(!pppConnected && time_counter > 0)
+    {
+        sys_msleep(TIME_STEP_MS);
+        time_counter -= TIME_STEP_MS;
+    }
+
+    if(pppConnected)
+        return 0;
+
+    return -1;
+
+}
+
+int atest_close_ppp()
+{
+    #define TIME_STEP_MS 100
+    int time_counter = 20 * 1000;
+    app_notify_exit_ppp();
+
+    while(pppConnected && time_counter > 0)
+    {
+        sys_msleep(TIME_STEP_MS);
+        time_counter -= TIME_STEP_MS;
+    }
+
+    return 0;
+
 }
 
