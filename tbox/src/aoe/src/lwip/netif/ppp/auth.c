@@ -69,6 +69,7 @@
  */
 
 #include "netif/ppp/ppp_opts.h"
+#include "aoe_config.h"
 #if PPP_SUPPORT /* don't build if not configured for use in lwipopts.h */
 
 #if 0 /* UNUSED */
@@ -125,6 +126,9 @@
 #endif /* EAP_SUPPORT */
 #if CBCP_SUPPORT
 #include "netif/ppp/cbcp.h"
+#endif
+#ifdef AOE_REFACTORING
+extern char aoe_check_ipv6cp_feature();
 #endif
 
 #if 0 /* UNUSED */
@@ -752,7 +756,13 @@ void link_established(ppp_pcb *pcb) {
 	for (i = 0; (protp = protocols[i]) != NULL; ++i)
 	    if (protp->protocol != PPP_LCP
 		&& protp->lowerup != NULL)
+       {
+        #ifdef AOE_REFACTORING
+        if(protp->protocol == PPP_IPV6CP && !aoe_check_ipv6cp_feature())
+            continue;
+        #endif
 		(*protp->lowerup)(pcb);
+       }
     }
 
 #if PPP_AUTH_SUPPORT

@@ -19,10 +19,13 @@
 #define JSON_KW_PPP_REMOTEIP	"remoteip"
 #define JSON_KW_PPP_LOCALIP 	"localip"
 #define JSON_KW_PPP_APN 		"apn"
+#define JSON_KW_PPP_IPV6 		"enable_ipv6cp"
 //#define JSON_KW_PPP_ECHO_ADPT 	"lcp_echo_adaptive"
 #define JSON_KW_PPP_ECHO_INTERVAL 	"lcp_echo_interval"
 #define JSON_KW_PPP_ECHO_FAILS 		"lcp_echo_fails"
 #define JSON_KW_PPP_ACCM_FF 		"enable_accm_ff"
+
+
 
 
 #define JSON_KW_LOG 				"debug log"
@@ -271,6 +274,17 @@ int parse_ppp_configuration(char *conf_file)
 			memset(ppp_option.apn, 0, sizeof(ppp_option.apn));
 			strcpy(ppp_option.apn,  json_value_get_string(val));
 		}
+        
+        val = json_object_get_value(conf, JSON_KW_PPP_IPV6); /* fetch value (if possible) */
+        if (json_value_get_type(val) != JSONNumber) 
+        {
+            printf("INFO: no configuration for JSON_KW_PPP_IPV6\n");
+        }
+        else
+        {
+            printf("INFO: JSON_KW_PPP_IPV6:%d\n", (int)json_value_get_number(val));
+            ppp_option.enable_ipv6cp = (int)json_value_get_number(val);
+        }
 
 		val = json_object_get_value(conf, JSON_KW_PPP_ECHO_INTERVAL); /* fetch value (if possible) */
 		if (json_value_get_type(val) != JSONNumber) 
@@ -449,6 +463,7 @@ void save_config()
 	json_object_set_string(obj, JSON_KW_PPP_REMOTEIP, ppp_option.remote_ip);
 	json_object_set_string(obj, JSON_KW_PPP_LOCALIP, ppp_option.local_ip);
 	json_object_set_string(obj, JSON_KW_PPP_APN, ppp_option.apn);
+    json_object_set_number(obj, JSON_KW_PPP_IPV6, ppp_option.enable_ipv6cp);
 	json_object_set_number(obj, JSON_KW_PPP_ECHO_INTERVAL, ppp_option.lcp_echo_interval);
 	json_object_set_number(obj, JSON_KW_PPP_ECHO_FAILS, ppp_option.lcp_echo_fails);
 	json_object_set_number(obj, JSON_KW_PPP_ACCM_FF, ppp_option.enable_accm_ff);
@@ -493,6 +508,11 @@ void aoe_init_configuration()
 char aoe_enbale_accm_ff()
 {
 	return aoe_get_ppp_opt()->enable_accm_ff;
+}
+
+char aoe_check_ipv6cp_feature()
+{
+	return aoe_get_ppp_opt()->enable_ipv6cp;
 }
 
 

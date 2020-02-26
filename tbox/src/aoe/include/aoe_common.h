@@ -17,6 +17,7 @@ typedef struct
 	char remote_ip[16];
 	char local_ip[16];
 	char apn[128];
+    unsigned char enable_ipv6cp;
 	//unsigned int lcp_echo_adaptive;
 	unsigned char lcp_echo_interval;
 	unsigned char lcp_echo_fails;
