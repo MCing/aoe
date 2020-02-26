@@ -216,6 +216,7 @@ static void pppLinkStatusCallback(ppp_pcb *pcb, int errCode, void *ctx)
 	//debug
 	if(errCode != PPPERR_NONE)
 	{
+	    pppConnected = false;
 		pppapi_free(ppp);
         puts("ppp closed.\n");
         ppp = NULL;
@@ -633,17 +634,15 @@ int lwipLoop(void *param)
 		if(ppp_mode_inused() == 0)
 			continue;
 
+        if(!ppp)
+            break;
+
         /* try to read characters from serial line and pass them to PPPoS */
         count = sio_read(ppp_sio, (u8_t *) rxbuf, 1024);
 	
         if (count > 0)
         {
             pppos_input_tcpip(ppp, rxbuf, count);
-        }
-        else
-        {
-            /* nothing received, give other tasks a chance to run */
-            sys_msleep(1);
         }
 
         if (callClosePpp && ppp)
@@ -654,7 +653,7 @@ int lwipLoop(void *param)
             //pppapi_free(ppp);
             //puts("ppp closed.\n");
             //ppp = NULL;
-            break;
+            //break;
         }
     }
 
