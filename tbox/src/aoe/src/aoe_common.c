@@ -825,6 +825,8 @@ static int aoe_convert_ppp_data(const unsigned char *data, int data_len, unsigne
 		p_data++;
 		len -= 1;
 	}
+	if(len <= 0)
+		return -1;
 
 	if(*(p_data+len-1) == 0x7E)
 	{
