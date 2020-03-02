@@ -81,17 +81,22 @@ done list:
 ------上层可设置
 #【A】优化ping 指令
 -----优化显示时间
-
-todo list: update 20200111
 #【B】优化速率 
   iperf 测试速率
   总结影响速率的因素
+----扩大发送窗口大小
+#【B】pcap 存log功能模块不稳定，长期ping过程会crash
+-----转换函数问题，已解决
+#【B】ppp断开时间长
+-----已解决，未解析最后一个ack
+#【B】Read response buffer failed. The Response buffer size is out of buffer size(16)!
+----不用解
+
+todo list: update 20200302
 #【B】支持高波特率921600
 #【B】根据linux ppp配置添加配置
-#【B】pcap 存log功能模块不稳定，长期ping过程会crash
-#【B】Read response buffer failed. The Response buffer size is out of buffer size(16)!
-#【B】ppp断开时间长
 #【C】是能rt-thread 的dump log功能
+#【B】添加新的应用（ftp）
 
 
 
