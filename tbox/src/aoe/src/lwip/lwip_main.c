@@ -83,7 +83,7 @@ ppp_pcb *ppp;
 /* THE PPP interface */
 struct netif ppp_netif;
 /* THE PPP descriptor */
-u8_t sio_idx = 3;
+int sio_idx = 3;
 sio_fd_t ppp_sio;
 #endif /* USE_PPP */
 
